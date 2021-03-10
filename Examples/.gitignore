@@ -1,0 +1,17 @@
+ctaocrypt/src/src/
+*.swp
+*.lo
+*.la
+*.o
+*.d
+*.patch
+*.deps
+*.libs
+*.cache
+.dirstamp
+*.user
+*.ncb
+*.suo
+*.sdf
+*.opensdf
+.vscode

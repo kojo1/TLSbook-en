@@ -1,14 +1,14 @@
 CC = gcc
 #CC = clang
-SSL = OPENSSL
-#SSL = WOLFSSL
+#SSL = OPENSSL
+SSL = WOLFSSL
 DEBUG= no
 ifeq ($(SSL),OPENSSL)
-TARGET    = TLS-client-openssl
+TARGET    = TLS-server-openssl
 CFLAGS    = -g -Wall
 LDFLAGS   = -lcrypto -lssl
 else
-TARGET    = TLS-client-wolfssl
+TARGET    = TLS-server-wolfssl
 CFLAGS    = -g -Wall -DUSE_WOLFSSL
 LDFLAGS   = -lwolfssl
 endif

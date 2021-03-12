@@ -11,7 +11,7 @@ CFLAGS    = -g -Wall
 LDFLAGS   = -lcrypto -lssl
 else
 CFLAGS    = -g -Wall -DUSE_WOLFSSL
-INCLUDE   = -I/usr/local/include/wolfssl/
+INCLUDE   = -I/usr/local/include/wolfssl/ -include options.h
 LDFLAGS   = -lwolfssl
 endif
 

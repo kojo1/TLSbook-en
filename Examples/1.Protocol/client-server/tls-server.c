@@ -12,10 +12,6 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-#if defined(USE_WOLFSSL)
-    #include <options.h>
-#endif
-
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 

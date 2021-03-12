@@ -1,24 +1,6 @@
 /* TLS-client.c
  */
- 
-/* the usual suspects */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-/* socket includes */
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <unistd.h>
-
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-
-#undef  SSL_SUCCESS
-#define SSL_SUCCESS 1
-#undef  SSL_FAILURE
-#define SSL_FAILURE 0
+#include "example_common.h"
 
 #define DEFAULT_PORT 11111
 #define CERT_FILE "../../certs/example-server-cert.pem"

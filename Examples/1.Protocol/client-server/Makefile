@@ -1,5 +1,5 @@
-CC = gcc
-#CC = clang
+#CC = gcc
+CC = clang
 SSL = OPENSSL
 #SSL = WOLFSSL
 DEBUG= no
@@ -7,24 +7,27 @@ CTARGET   = TLS-client-
 STARGET   = TLS-server-
 
 ifeq ($(SSL),OPENSSL)
-CFLAGS    = -g -Wall
+INCLUDE   = -I../../include
 LDFLAGS   = -lcrypto -lssl
 else
-CFLAGS    = -g -Wall -DUSE_WOLFSSL
-INCLUDE   = -I/usr/local/include/wolfssl/ -include options.h
+INCLUDE   = -I../../include -I/usr/local/include/wolfssl/ -include options.h
 LDFLAGS   = -lwolfssl
 endif
 
+CFLAGS    = -g -Wall
+
 CSOURCE	  = ./tls-client.c
 SSOURCE   = ./tls-server.c
+COBJ      = $(CSOURCE:.c=.o)
+SOBJ      = $(SSOURCE:.c=.o)
+OBJS      = $(COBJ) $(SOBJ)
 
-all: clean client server
+.c.o:
+	@$(CC) $(CFLAGS) $(INCLUDE) -o $@ -c $<
 
-server: $(SSOURCE)
-	$(CC) $(CFLAGS) $(INCLUDE) -o $(STARGET)$(SSL) $(SSOURCE) $(LDFLAGS)
-
-client: $(CSOURCE)
-	$(CC) $(CFLAGS) $(INCLUDE) -o $(CTARGET)$(SSL) $(CSOURCE) $(LDFLAGS)
+all: clean $(OBJS)
+	@$(CC) $(CFLAGS) -o $(CTARGET)$(SSL) $(COBJ) $(LDFLAGS)
+	@$(CC) $(CFLAGS) -o $(STARGET)$(SSL) $(SOBJ) $(LDFLAGS)
 
 clean: FORCE
 	-rm -f *.o

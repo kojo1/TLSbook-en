@@ -12,27 +12,21 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-#if !defined(USE_WOLFSSL)
-    #include <string.h>
-    #include <openssl/ssl.h>
-    #include <openssl/err.h>
-    
-    #define SSL_SUCCESS 1
-    #define SSL_FAILURE 0
-#else
-    /* wolfSSL */
-    #include <wolfssl/options.h>
-    #include <wolfssl/openssl/ssl.h>
+#if defined(USE_WOLFSSL)
+    #include <options.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+#undef  SSL_SUCCESS
+#define SSL_SUCCESS 1
 #define DEFAULT_PORT 11111
 
-#define CERT_FILE "../certs/server-cert.pem"
-#define KEY_FILE  "../certs/server-key.pem"
+#define CERT_FILE "../../certs/example-server-cert.pem"
+#define KEY_FILE  "../../certs/example-server-key.pem"
 
-
-
-int main()
+int main(int argc, char** argv)
 {
     int                sockfd;
     int                connd;
@@ -60,8 +54,6 @@ int main()
         return -1;
     }
 
-
-
     /* Create and initialize SSL_CTX */
     if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
         fprintf(stderr, "ERROR: failed to create SSL_CTX\n");
@@ -84,8 +76,6 @@ int main()
         return -1;
     }
 
-
-
     /* Initialize the server address struct with zeros */
     memset(&servAddr, 0, sizeof(servAddr));
 
@@ -93,8 +83,6 @@ int main()
     servAddr.sin_family      = AF_INET;             /* using IPv4      */
     servAddr.sin_port        = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
     servAddr.sin_addr.s_addr = INADDR_ANY;          /* from anywhere   */
-
-
 
     /* Bind the server socket to our port */
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
@@ -107,8 +95,6 @@ int main()
         fprintf(stderr, "ERROR: failed to listen\n");
         return -1;
     }
-
-
 
     /* Continue to accept clients until shutdown is issued */
     while (!shutdown) {
@@ -138,10 +124,7 @@ int main()
             return -1;
         }
 
-
         printf("Client connected successfully\n");
-
-
 
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
@@ -159,8 +142,6 @@ int main()
             shutdown = 1;
         }
 
-
-
         /* Write our reply into buff */
         memset(buff, 0, sizeof(buff));
         memcpy(buff, reply, strlen(reply));
@@ -172,16 +153,12 @@ int main()
             return -1;
         }
 
-
-
         /* Cleanup after this connection */
         SSL_free(ssl);      /* Free the wolfSSL object              */
         close(connd);           /* Close the connection to the client   */
     }
 
     printf("Shutdown complete\n");
-
-
 
     /* Cleanup and return */
     SSL_CTX_free(ctx);  /* Free the wolfSSL context object          */

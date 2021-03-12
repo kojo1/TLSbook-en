@@ -6,28 +6,26 @@
 #include <stdio.h>
 #include <string.h>
 
-
 /* socket includes */
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
 
-#if !defined(USE_WOLFSSL)
-    #include <string.h>
-    #include <openssl/ssl.h>
-    #include <openssl/err.h>
-    
-    #define SSL_SUCCESS 1
-    #define SSL_FAILURE 0
-#else
-    /* wolfSSL */
-    #include <wolfssl/options.h>
-    #include <wolfssl/openssl/ssl.h>
+#if defined(USE_WOLFSSL)
+    #include <options.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+#undef  SSL_SUCCESS
+#define SSL_SUCCESS 1
+#undef  SSL_FAILURE
+#define SSL_FAILURE 0
+
 #define DEFAULT_PORT 11111
-#define CERT_FILE "../certs/ca-cert.pem"
+#define CERT_FILE "../../certs/example-server-cert.pem"
 
 int main(int argc, char** argv)
 {
@@ -116,7 +114,8 @@ int main(int argc, char** argv)
 
     /* Connect to SSL on the server side */
     if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
-        fprintf(stderr, "ERROR: failed to connect to SSL\n");
+        fprintf(stderr, "ERROR: failed to connect to SSL, error code :%d\n", 
+            SSL_get_error(ssl, ret));
         goto cleanup;
     }
 
@@ -149,6 +148,8 @@ int main(int argc, char** argv)
 
     /* Cleanup and return */
 cleanup:
+    SSL_shutdown(ssl);  /* Shutdown SSL to try to send "close notify" */
+                        /* alert to the peer                          */
     SSL_free(ssl);      /* Free the SSL object                  */
 ctx_cleanup:
     SSL_CTX_free(ctx);  /* Free the SSL context object          */

@@ -4,8 +4,8 @@
 
 #define DEFAULT_PORT 11111
 
-#define CERT_FILE "../../certs/example-server-cert.pem"
-#define KEY_FILE  "../../certs/example-server-key.pem"
+#define CERT_FILE "../../certs/tb-server-cert.pem"
+#define KEY_FILE  "../../certs/tb-server-key.pem"
 
 int main(int argc, char** argv)
 {
@@ -32,13 +32,15 @@ int main(int argc, char** argv)
      * 0 means choose the default protocol. */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         fprintf(stderr, "ERROR: failed to create the socket\n");
-        return -1;
+        ret = -1;
+        goto end;
     }
 
     /* Create and initialize SSL_CTX */
     if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
         fprintf(stderr, "ERROR: failed to create SSL_CTX\n");
-        return -1;
+        ret = -1;
+        goto socket_cleanup;
     }
 
     /* Load server certificates into SSL_CTX */
@@ -46,7 +48,8 @@ int main(int argc, char** argv)
         != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 CERT_FILE);
-        return -1;
+        ret = 1;
+        goto ctx_cleanup;
     }
 
     /* Load server key into SSL_CTX */
@@ -54,7 +57,8 @@ int main(int argc, char** argv)
         != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 KEY_FILE);
-        return -1;
+        ret = 1;
+        goto ctx_cleanup;
     }
 
     /* Initialize the server address struct with zeros */
@@ -68,13 +72,15 @@ int main(int argc, char** argv)
     /* Bind the server socket to our port */
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
         fprintf(stderr, "ERROR: failed to bind\n");
-        return -1;
+        ret = 1;
+        goto ctx_cleanup;
     }
 
     /* Listen for a new connection, allow 5 pending connections */
     if (listen(sockfd, 5) == -1) {
         fprintf(stderr, "ERROR: failed to listen\n");
-        return -1;
+        ret = 1;
+        goto ctx_cleanup;
     }
 
     /* Continue to accept clients until shutdown is issued */
@@ -85,13 +91,15 @@ int main(int argc, char** argv)
         if ((connd = accept(sockfd, (struct sockaddr*)&clientAddr, &size))
             == -1) {
             fprintf(stderr, "ERROR: failed to accept the connection\n\n");
-            return -1;
+            ret = 1;
+            goto ctx_cleanup;
         }
 
         /* Create a SSL object */
         if ((ssl = SSL_new(ctx)) == NULL) {
             fprintf(stderr, "ERROR: failed to create SSL object\n");
-            return -1;
+            ret = 1;
+            goto cleanup;
         }
 
         /* Attach wolfSSL to the socket */
@@ -102,7 +110,8 @@ int main(int argc, char** argv)
         if (ret != SSL_SUCCESS) {
             fprintf(stderr, "wolfSSL_accept error = %d\n",
                 SSL_get_error(ssl, ret));
-            return -1;
+            ret = 1;
+            goto cleanup;
         }
 
         printf("Client connected successfully\n");
@@ -111,7 +120,8 @@ int main(int argc, char** argv)
         memset(buff, 0, sizeof(buff));
         if (SSL_read(ssl, buff, sizeof(buff)-1) == -1) {
             fprintf(stderr, "ERROR: failed to read\n");
-            return -1;
+            ret = 1;
+            goto cleanup;
         }
 
         /* Print to stdout any data the client sends */
@@ -131,18 +141,26 @@ int main(int argc, char** argv)
         /* Reply back to the client */
         if (SSL_write(ssl, buff, len) != len) {
             fprintf(stderr, "ERROR: failed to write\n");
-            return -1;
+            ret = 1;
+            goto cleanup;
         }
 
         /* Cleanup after this connection */
         SSL_free(ssl);      /* Free the wolfSSL object              */
-        close(connd);           /* Close the connection to the client   */
+        close(connd);       /* Close the connection to the client   */
     }
 
     printf("Shutdown complete\n");
 
     /* Cleanup and return */
-    SSL_CTX_free(ctx);  /* Free the wolfSSL context object          */
-    close(sockfd);          /* Close the socket listening for clients   */
-    return 0;               /* Return reporting a success               */
+cleanup:
+    SSL_shutdown(ssl);  /* Shutdown SSL to try to send "close notify"   */
+                        /* alert to the peer                            */
+    SSL_free(ssl);      /* Free the SSL object                          */
+ctx_cleanup:
+    SSL_CTX_free(ctx);  /* Free the SSL context object                  */
+socket_cleanup:
+    close(sockfd);      /* Close the connection to the server           */
+end:
+    return ret;          /* Return reporting a success                   */
 }

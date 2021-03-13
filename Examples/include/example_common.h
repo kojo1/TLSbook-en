@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>

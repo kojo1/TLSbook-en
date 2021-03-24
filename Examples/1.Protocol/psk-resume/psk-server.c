@@ -17,10 +17,12 @@ static unsigned int my_psk_server_cb(SSL* ssl, const char* identity,
     (void)ssl;
     (void)key_max_len;
 
+    printf("here\n");
     if (strncmp(identity, "Client_identity", 15) != 0) {
+        printf("error!\n");
         return 0;
     }
-
+    printf("OK!\n");
     key[0] = 26;
     key[1] = 43;
     key[2] = 60;
@@ -98,6 +100,7 @@ int main()
         fprintf(stderr, "ERROR: Failed to initialize the library\n");
         goto socket_cleanup;
     }
+    SSL_load_error_strings();
 
     /* create ctx and configure certificates */
     if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
@@ -109,7 +112,7 @@ int main()
     /* use psk suite for security */
     SSL_CTX_set_psk_server_callback(ctx, my_psk_server_cb);
 
-    if ((ret = SSL_CTX_use_psk_identity_hint(ctx, "ssl server"))
+    if ((ret = SSL_CTX_use_psk_identity_hint(ctx, "1a2b3c4d"))
          != SSL_SUCCESS) {
         printf("Fatal error : ctx use psk identity hint returned %d\n", ret);
         return ret;
@@ -164,7 +167,8 @@ int main()
                 }
             }
             if (n < 0) {
-                printf("Fatal error :respond: read error\n");
+                printf("Fatal error :respond: read error (code:%ld n:%d)\n", 
+                ERR_get_error(), n);
                 ret = -1;
                 SSL_shutdown(ssl);
                 SSL_free(ssl);

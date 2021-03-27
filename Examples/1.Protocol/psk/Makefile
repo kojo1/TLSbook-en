@@ -1,0 +1,37 @@
+CC = gcc
+#CC = clang
+#SSL = OPENSSL
+SSL = WOLFSSL
+DEBUG= no
+CTARGET   = tls-psk-client-
+STARGET   = tls-psk-server-
+INSTALL_DIR = /usr/local/
+CSOURCE	  = ./tls-psk-client.c
+SSOURCE   = ./tls-psk-server.c
+COBJ      = $(CSOURCE:.c=.o)
+SOBJ      = $(SSOURCE:.c=.o)
+
+ifeq ($(SSL),OPENSSL)
+INCLUDE   = -I../../include
+LDFLAGS   = -lcrypto -lssl
+else
+INCLUDE   = -I../../include -I$(INSTALL_DIR)/include/wolfssl/ -include options.h
+LDFLAGS   = -lwolfssl
+endif
+
+CFLAGS    = -g -Wall $(INCLUDE)
+
+all: $(STARGET)$(SSL) $(CTARGET)$(SSL)
+
+$(STARGET)$(SSL): $(SOBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(CTARGET)$(SSL): $(COBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+clean: FORCE
+	-rm -f *.o
+	-rm -f $(STARGET)$(SSL) $(CTARGET)$(SSL)
+
+FORCE:
+.PHONY: FORCE

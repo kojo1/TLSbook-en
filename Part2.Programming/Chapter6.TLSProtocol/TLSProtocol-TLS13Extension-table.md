@@ -1,7 +1,7 @@
-## TLS 1.3のExtension一覧
+## TLS 1.3のTLS拡張一覧
 <br>
 
-|エクステンションタイプ| 概要|RFC|エクステンションが含まれるTLSメッセージ|
+|拡張タイプ| 概要|RFC|拡張が含まれるTLSメッセージ|
 |:--:|:--:|:--|:--:|
 |server_name<br>(SNI)|セッション再開時の照合要素として利用|6066|ClientHello, EncryptedExtensions|
 |max_fragment_length|メッセージの最大フラグメントサイズ|6666|ClientHello, EncryptedExtensions|

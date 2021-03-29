@@ -3,8 +3,8 @@ CC = clang
 SSL = OPENSSL
 #SSL = WOLFSSL
 DEBUG= no
-CTARGET   = PSK-client-
-STARGET   = PSK-server-
+CTARGET   = Client-tls-psk-
+STARGET   = Server-tls-psk-
 
 ifeq ($(SSL),OPENSSL)
 INCLUDE   = -I../../include
@@ -16,8 +16,8 @@ endif
 
 CFLAGS    = -g -Wall
 
-CSOURCE	  = ./psk-client.c
-SSOURCE   = ./psk-server.c
+CSOURCE	  = ./client-tls-psk.c
+SSOURCE   = ./server-tls-psk.c
 COBJ      = $(CSOURCE:.c=.o)
 SOBJ      = $(SSOURCE:.c=.o)
 OBJS      = $(COBJ) $(SOBJ)

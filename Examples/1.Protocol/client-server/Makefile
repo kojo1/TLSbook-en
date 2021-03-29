@@ -1,13 +1,13 @@
 CC = gcc
 #CC = clang
-#SSL = OPENSSL
-SSL = WOLFSSL
+SSL = OPENSSL
+#SSL = WOLFSSL
 DEBUG= no
-CTARGET   = TLS-client-
-STARGET   = TLS-server-
+CTARGET   = Client-tls-
+STARGET   = Server-tls-
 INSTALL_DIR = /usr/local/
-CSOURCE	  = ./tls-client.c
-SSOURCE   = ./tls-server.c
+CSOURCE   = ./client-tls.c
+SSOURCE   = ./server-tls.c
 COBJ      = $(CSOURCE:.c=.o)
 SOBJ      = $(SSOURCE:.c=.o)
 

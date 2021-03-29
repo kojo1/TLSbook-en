@@ -1,7 +1,7 @@
 #CC = gcc
 CC = clang
-SSL = OPENSSL
-#SSL = WOLFSSL
+#SSL = OPENSSL
+SSL = WOLFSSL
 DEBUG= no
 CTARGET   = Client-tls-psk-
 STARGET   = Server-tls-psk-

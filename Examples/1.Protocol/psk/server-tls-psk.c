@@ -1,71 +1,36 @@
-/* server-tls.c
- *
- * Copyright (C) 2006-2020 wolfSSL Inc.
- *
- * This file is part of wolfSSL. (formerly known as CyaSSL)
- *
- * wolfSSL is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * wolfSSL is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+/* 
+ * psk-server.c
  */
+#include "example_common.h"
 
-/* the usual suspects */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#define DEFAULT_PORT        11111   /* default port */
+#define PSK_KEY_LEN 4
 
-/* socket includes */
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <unistd.h>
-
-/* wolfSSL */
-#include <wolfssl/options.h>
-#include <wolfssl/ssl.h>
-
-#define DEFAULT_PORT 11111
-
-/* identity is OpenSSL testing default for openssl s_client, keep same */
-static const char* kIdentityStr = "Client_identity";
-
-static WC_INLINE unsigned int my_psk_server_tls13_cb(WOLFSSL* ssl,
-        const char* identity, unsigned char* key, unsigned int key_max_len,
-        const char** ciphersuite)
+ /* Identify which psk key to use.                                      */
+ /* @param ssl a pointer to SSL object                                  */
+ /* @param identity id to identify key                                  */
+ /* @param key pre shared key                                           */
+ /* @param key_max_len maximum length of the key                        */
+ /* @return key length on success, otherwise 0                          */
+static unsigned int my_psk_server_cb(SSL* ssl, const char* identity,
+                           unsigned char* key, unsigned int key_max_len)
 {
-    int i;
-    int b = 0x01;
-    const char* userCipher = (const char*)wolfSSL_get_psk_callback_ctx(ssl);
-
     (void)ssl;
     (void)key_max_len;
 
-    /* see internal.h MAX_PSK_ID_LEN for PSK identity limit */
-    if (strncmp(identity, kIdentityStr, XSTRLEN(kIdentityStr)) != 0)
+    if (strncmp(identity, "Client_identity", 15) != 0) {
+        printf("error!\n");
         return 0;
-
-    for (i = 0; i < 32; i++, b += 0x22) {
-        if (b >= 0x100)
-            b = 0x01;
-        key[i] = b;
     }
 
-    *ciphersuite = userCipher ? userCipher : "TLS13-AES128-GCM-SHA256";
+    key[0] = 26;
+    key[1] = 43;
+    key[2] = 60;
+    key[3] = 77;
 
-    return 32;   /* length of key in octets or 0 for error */
+    return PSK_KEY_LEN;
 }
-
-int main()
+int main(int argc, char** argv)
 {
     int                sockfd;
     int                connd;
@@ -79,33 +44,30 @@ int main()
     const char*        reply = "I hear ya fa shizzle!\n";
 
     /* declare wolfSSL objects */
-    WOLFSSL_CTX* ctx;
-    WOLFSSL*     ssl;
+    SSL_CTX* ctx;
+    SSL*     ssl;
 
-
-
-    /* Initialize wolfSSL */
-    wolfSSL_Init();
-
-
+    /* Initialize SSL */
+    SSL_library_init();
 
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
      * 0 means choose the default protocol. */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         fprintf(stderr, "ERROR: failed to create the socket\n");
-        return -1;
+        ret = -1;
+        goto end;
     }
 
-
-
-    /* Create and initialize WOLFSSL_CTX */
-    if ((ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
-        fprintf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
-        return -1;
+    /* Create and initialize SSL_CTX */
+    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
+        fprintf(stderr, "ERROR: failed to create SSL_CTX\n");
+        ret = -1;
+        goto socket_cleanup;
     }
 
-    wolfSSL_CTX_set_psk_server_tls13_callback(ctx, my_psk_server_tls13_cb);
+    /* use psk suite for security */
+    SSL_CTX_set_psk_server_callback(ctx, my_psk_server_cb);
 
     /* Initialize the server address struct with zeros */
     memset(&servAddr, 0, sizeof(servAddr));
@@ -115,21 +77,19 @@ int main()
     servAddr.sin_port        = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
     servAddr.sin_addr.s_addr = INADDR_ANY;          /* from anywhere   */
 
-
-
     /* Bind the server socket to our port */
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
         fprintf(stderr, "ERROR: failed to bind\n");
-        return -1;
+        ret = 1;
+        goto ctx_cleanup;
     }
 
     /* Listen for a new connection, allow 5 pending connections */
     if (listen(sockfd, 5) == -1) {
         fprintf(stderr, "ERROR: failed to listen\n");
-        return -1;
+        ret = 1;
+        goto ctx_cleanup;
     }
-
-
 
     /* Continue to accept clients until shutdown is issued */
     while (!shutdown) {
@@ -139,36 +99,37 @@ int main()
         if ((connd = accept(sockfd, (struct sockaddr*)&clientAddr, &size))
             == -1) {
             fprintf(stderr, "ERROR: failed to accept the connection\n\n");
-            return -1;
+            ret = 1;
+            goto ctx_cleanup;
         }
 
-        /* Create a WOLFSSL object */
-        if ((ssl = wolfSSL_new(ctx)) == NULL) {
-            fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
-            return -1;
+        /* Create a SSL object */
+        if ((ssl = SSL_new(ctx)) == NULL) {
+            fprintf(stderr, "ERROR: failed to create SSL object\n");
+            ret = 1;
+            goto cleanup;
         }
 
         /* Attach wolfSSL to the socket */
-        wolfSSL_set_fd(ssl, connd);
+        SSL_set_fd(ssl, connd);
 
         /* Establish TLS connection */
-        ret = wolfSSL_accept(ssl);
+        ret = SSL_accept(ssl);
         if (ret != SSL_SUCCESS) {
             fprintf(stderr, "wolfSSL_accept error = %d\n",
-                wolfSSL_get_error(ssl, ret));
-            return -1;
+                SSL_get_error(ssl, ret));
+            ret = 1;
+            goto cleanup;
         }
-
 
         printf("Client connected successfully\n");
 
-
-
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
-        if (wolfSSL_read(ssl, buff, sizeof(buff)-1) == -1) {
+        if (SSL_read(ssl, buff, sizeof(buff)-1) == -1) {
             fprintf(stderr, "ERROR: failed to read\n");
-            return -1;
+            ret = 1;
+            goto cleanup;
         }
 
         /* Print to stdout any data the client sends */
@@ -180,33 +141,34 @@ int main()
             shutdown = 1;
         }
 
-
-
         /* Write our reply into buff */
         memset(buff, 0, sizeof(buff));
         memcpy(buff, reply, strlen(reply));
         len = strnlen(buff, sizeof(buff));
 
         /* Reply back to the client */
-        if (wolfSSL_write(ssl, buff, len) != len) {
+        if (SSL_write(ssl, buff, len) != len) {
             fprintf(stderr, "ERROR: failed to write\n");
-            return -1;
+            ret = 1;
+            goto cleanup;
         }
 
-
-
         /* Cleanup after this connection */
-        wolfSSL_free(ssl);      /* Free the wolfSSL object              */
-        close(connd);           /* Close the connection to the client   */
+        SSL_free(ssl);      /* Free the wolfSSL object              */
+        close(connd);       /* Close the connection to the client   */
     }
 
     printf("Shutdown complete\n");
 
-
-
     /* Cleanup and return */
-    wolfSSL_CTX_free(ctx);  /* Free the wolfSSL context object          */
-    wolfSSL_Cleanup();      /* Cleanup the wolfSSL environment          */
-    close(sockfd);          /* Close the socket listening for clients   */
-    return 0;               /* Return reporting a success               */
+cleanup:
+    SSL_shutdown(ssl);  /* Shutdown SSL to try to send "close notify"   */
+                        /* alert to the peer                            */
+    SSL_free(ssl);      /* Free the SSL object                          */
+ctx_cleanup:
+    SSL_CTX_free(ctx);  /* Free the SSL context object                  */
+socket_cleanup:
+    close(sockfd);      /* Close the connection to the server           */
+end:
+    return ret;          /* Return reporting a success                   */
 }

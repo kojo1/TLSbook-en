@@ -1,67 +1,39 @@
-/* client-tls.c
- *
- * Copyright (C) 2006-2020 wolfSSL Inc.
- *
- * This file is part of wolfSSL. (formerly known as CyaSSL)
- *
- * wolfSSL is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * wolfSSL is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+
+/* 
+ * client-psk.c
  */
 
-/* the usual suspects */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "example_common.h"
 
-/* socket includes */
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <unistd.h>
-
-/* wolfSSL */
-#include <wolfssl/options.h>
-#include <wolfssl/ssl.h>
-
-#define DEFAULT_PORT 11111
+#define DEFAULT_PORT        11111   /* default port */
+#define PSK_KEY_LEN         4
 
 static const char* kIdentityStr = "Client_identity";
-
-static WC_INLINE unsigned int my_psk_client_tls13_cb(WOLFSSL* ssl,
-        const char* hint, char* identity, unsigned int id_max_len,
-        unsigned char* key, unsigned int key_max_len, const char** ciphersuite)
+/*
+ *psk client set up.
+ */
+/*
+ *psk client set up.
+ */
+static inline unsigned int My_Psk_Client_Cb(SSL* ssl, const char* hint,
+        char* identity, unsigned int id_max_len, unsigned char* key,
+        unsigned int key_max_len)
 {
-    int i;
-    int b = 0x01;
-    const char* userCipher = (const char*)wolfSSL_get_psk_callback_ctx(ssl);
-
     (void)ssl;
     (void)hint;
     (void)key_max_len;
 
-    /* see internal.h MAX_PSK_ID_LEN for PSK identity limit */
+    /* identity is OpenSSL testing default for openssl s_client, keep same*/
     strncpy(identity, kIdentityStr, id_max_len);
 
-    for (i = 0; i < 32; i++, b += 0x22) {
-        if (b >= 0x100)
-            b = 0x01;
-        key[i] = b;
-    }
+    /* test key n hex is 0x1a2b3c4d , in decimal 439,041,101, we're using
+     * unsigned binary */
+    key[0] = 26;
+    key[1] = 43;
+    key[2] = 60;
+    key[3] = 77;
 
-    *ciphersuite = userCipher ? userCipher : "TLS13-AES128-GCM-SHA256";
-
-    return 32;   /* length of key in octets or 0 for error */
+    return PSK_KEY_LEN;
 }
 
 int main(int argc, char** argv)
@@ -70,12 +42,11 @@ int main(int argc, char** argv)
     struct sockaddr_in servAddr;
     char               buff[256];
     size_t             len;
+    int                ret;
 
-    /* declare wolfSSL objects */
-    WOLFSSL_CTX* ctx;
-    WOLFSSL*     ssl;
-
-
+    /* declare SSL objects */
+    SSL_CTX* ctx = NULL;
+    SSL*     ssl = NULL;
 
     /* Check for proper calling convention */
     if (argc != 2) {
@@ -83,30 +54,13 @@ int main(int argc, char** argv)
         return 0;
     }
 
-
-
-    /* Initialize wolfSSL */
-    wolfSSL_Init();
-
-    /* Create and initialize WOLFSSL_CTX */
-    if ((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method())) == NULL) {
-        fprintf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
-        return -1;
-    }
-
-    wolfSSL_CTX_set_psk_client_tls13_callback(ctx, my_psk_client_tls13_cb);
-
-    if (wolfSSL_CTX_UseSessionTicket(ctx) != WOLFSSL_SUCCESS) {
-        wolfSSL_CTX_free(ctx); ctx = NULL;
-        fprintf(stderr, "UseSessionTicket failed");
-    }
-
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
      * 0 means choose the default protocol. */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         fprintf(stderr, "ERROR: failed to create the socket\n");
-        return -1;
+        ret = -1;
+        goto end;
     }
 
     /* Initialize the server address struct with zeros */
@@ -119,82 +73,92 @@ int main(int argc, char** argv)
     /* Get the server IPv4 address from the command line call */
     if (inet_pton(AF_INET, argv[1], &servAddr.sin_addr) != 1) {
         fprintf(stderr, "ERROR: invalid address\n");
-        return -1;
+        ret = -1;
+        goto end;
     }
 
     /* Connect to the server */
-    if (connect(sockfd, (struct sockaddr*) &servAddr, sizeof(servAddr))
-        == -1) {
+    if ((ret = connect(sockfd, (struct sockaddr*) &servAddr, sizeof(servAddr)))
+         == -1) {
         fprintf(stderr, "ERROR: failed to connect\n");
-        return -1;
+        goto end;
     }
 
-    /* Create a WOLFSSL object */
-    if ((ssl = wolfSSL_new(ctx)) == NULL) {
+    /*---------------------------------*/
+    /* Start of security */
+    /*---------------------------------*/
+    /* Initialize SSL */
+    if ((ret = SSL_library_init()) != SSL_SUCCESS) {
+        fprintf(stderr, "ERROR: Failed to initialize the library\n");
+        goto socket_cleanup;
+    }
+
+    /* Create and initialize WOLFSSL_CTX */
+    if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) {
+        fprintf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
+        ret = -1;
+        goto socket_cleanup;
+    }
+
+    /* set up pre shared keys */
+    SSL_CTX_set_psk_client_callback(ctx, My_Psk_Client_Cb);
+
+    /* Create a SSL object */
+    if ((ssl = SSL_new(ctx)) == NULL) {
         fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
-        return -1;
+        ret = -1;
+        goto ctx_cleanup;
     }
 
-    /* Attach wolfSSL to the socket */
-    wolfSSL_set_fd(ssl, sockfd);
-
-    /* Connect to wolfSSL on the server side */
-    if (wolfSSL_connect(ssl) != SSL_SUCCESS) {
-        fprintf(stderr, "ERROR: failed to connect to wolfSSL\n");
-        return -1;
+    /* Attach SSL to the socket */
+    if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
+        fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
+        goto cleanup;
     }
 
-
+    /* Connect to SSL on the server side */
+    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to connect to SSL, error code :%d\n", 
+            SSL_get_error(ssl, ret));
+        goto cleanup;
+    }
 
     /* Get a message for the server from stdin */
     printf("Message for server: ");
     memset(buff, 0, sizeof(buff));
     if (fgets(buff, sizeof(buff), stdin) == NULL) {
         fprintf(stderr, "ERROR: failed to get message for server\n");
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
     len = strnlen(buff, sizeof(buff));
 
     /* Send the message to the server */
-    if (wolfSSL_write(ssl, buff, len) != len) {
-        fprintf(stderr, "ERROR: failed to write\n");
-        return -1;
+    if ((ret = SSL_write(ssl, buff, len)) != len) {
+        fprintf(stderr, "ERROR: failed to write entire message\n");
+        fprintf(stderr, "%d bytes of %d bytes were sent", ret, (int) len);
+        goto cleanup;
     }
-
-
 
     /* Read the server data into our buff array */
     memset(buff, 0, sizeof(buff));
-    if (wolfSSL_read(ssl, buff, sizeof(buff)-1) == -1) {
+    if ((ret = SSL_read(ssl, buff, sizeof(buff)-1)) == -1) {
         fprintf(stderr, "ERROR: failed to read\n");
-        return -1;
+        goto cleanup;
     }
 
     /* Print to stdout any data the server sends */
     printf("Server: %s\n", buff);
 
-  while ( SSL_shutdown( ssl ) != SSL_SUCCESS ) {
-        if( SSL_want_write( ssl ) || SSL_want_read( ssl ) ) 
-            continue;
-        else
-            break;
-   }
-   
-   ret = SSL_read( ssl, buff, num );
-   if( ret <= 0 ) {
-       ret = SSL_get_error( ssl, ret  );  
-
-       if( ret  == SSL_ERROR_ZERO_RETURN )
-               // OK. As expected
-       else
-               // NG
-   }
-
-
     /* Cleanup and return */
-    wolfSSL_free(ssl);      /* Free the wolfSSL object                  */
-    wolfSSL_CTX_free(ctx);  /* Free the wolfSSL context object          */
-    wolfSSL_Cleanup();      /* Cleanup the wolfSSL environment          */
-    close(sockfd);          /* Close the connection to the server       */
-    return 0;               /* Return reporting a success               */
+cleanup:
+    SSL_shutdown(ssl);  /* Shutdown SSL to try to send "close notify" */
+                        /* alert to the peer                          */
+    SSL_free(ssl);      /* Free the SSL object                  */
+ctx_cleanup:
+    SSL_CTX_free(ctx);  /* Free the SSL context object          */
+socket_cleanup:
+    close(sockfd);      /* Close the connection to the server   */
+end:
+    return ret;         /* Return reporting a success           */
 }

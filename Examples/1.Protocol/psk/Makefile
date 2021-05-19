@@ -1,33 +1,33 @@
-#CC = gcc
-CC = clang
+CC = gcc
+#CC = clang
 #SSL = OPENSSL
 SSL = WOLFSSL
 DEBUG= no
 CTARGET   = Client-tls-psk-
 STARGET   = Server-tls-psk-
+INSTALL_DIR = /usr/local/
+CSOURCE	  = ./client-tls-psk.c
+SSOURCE   = ./server-tls-psk.c
+COBJ      = $(CSOURCE:.c=.o)
+SOBJ      = $(SSOURCE:.c=.o)
 
 ifeq ($(SSL),OPENSSL)
 INCLUDE   = -I../../include
 LDFLAGS   = -lcrypto -lssl
 else
-INCLUDE   = -I../../include -I/usr/local/include/wolfssl/ -include options.h
+INCLUDE   = -I../../include -I$(INSTALL_DIR)/include/wolfssl/ -include options.h
 LDFLAGS   = -lwolfssl
 endif
 
-CFLAGS    = -g -Wall
+CFLAGS    = -g -Wall $(INCLUDE)
 
-CSOURCE	  = ./client-tls-psk.c
-SSOURCE   = ./server-tls-psk.c
-COBJ      = $(CSOURCE:.c=.o)
-SOBJ      = $(SSOURCE:.c=.o)
-OBJS      = $(COBJ) $(SOBJ)
+all: $(STARGET)$(SSL) $(CTARGET)$(SSL)
 
-.c.o:
-	@$(CC) $(CFLAGS) $(INCLUDE) -o $@ -c $<
+$(STARGET)$(SSL): $(SOBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-all: clean $(OBJS)
-	@$(CC) $(CFLAGS) -o $(CTARGET)$(SSL) $(COBJ) $(LDFLAGS)
-	@$(CC) $(CFLAGS) -o $(STARGET)$(SSL) $(SOBJ) $(LDFLAGS)
+$(CTARGET)$(SSL): $(COBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean: FORCE
 	-rm -f *.o

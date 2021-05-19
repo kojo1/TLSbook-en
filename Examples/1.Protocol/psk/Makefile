@@ -3,11 +3,11 @@ CC = gcc
 #SSL = OPENSSL
 SSL = WOLFSSL
 DEBUG= no
-CTARGET   = tls-psk-client-
-STARGET   = tls-psk-server-
+CTARGET   = Client-tls-psk-
+STARGET   = Server-tls-psk-
 INSTALL_DIR = /usr/local/
-CSOURCE	  = ./tls-psk-client.c
-SSOURCE   = ./tls-psk-server.c
+CSOURCE	  = ./client-tls-psk.c
+SSOURCE   = ./server-tls-psk.c
 COBJ      = $(CSOURCE:.c=.o)
 SOBJ      = $(SSOURCE:.c=.o)
 

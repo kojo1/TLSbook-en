@@ -156,11 +156,16 @@ In this case, when the client program calls SSL_connect, as shown in Figure 2-6,
 If both the client and server agree not to have a DH key agreement, the PSK key will be used as is. After allocating a TLS context programmatically, you can make the library work that way by instructing that context in advance (wolfSSL_CTX_no_dhe_psk for wolfSSL).
 
 ### 2.2.2 Session resume
-In TLS1.3, session resumption is organized as an extension of PSK, and the resumption protocol follows the PSK protocol. As the PSK key when resuming, use the session ticket exchanged in the previously established TLS session. If the Client Hello at the start of the handshake of the previous session contains the Session Ticket extension, the server side sends the session ticket to the client as one of the post-handshake protocols after a secure TLS session is established. On the client side, the session ticket sent is used when resuming the session (Fig. 2-7).
+In TLS1.3, session resumption is organized as an extension of PSK, and the resumption protocol follows the PSK protocol. As the PSK key when resuming, use the session ticket exchanged in the previously established TLS session. After the secure TLS session is established, the server side can send the session ticket to the client as one of the post-hand shake protocols. On the client side, the session ticket sent is used when resuming the session (Fig. 2-7).
 <br> <br>
 ![Fig. 2-7](./fig2-7.jpg)
 <br> <br>
-In TLS 1.3, the previous session ID is abolished, and it is obligatory to use the Session Ticket when resuming the session. You can choose whether to request a Session Ticket, but if you have the possibility of resuming a session, you must have a Session Ticket in the previous session.
+
+TLS1.2 or earler, there were two ways to resume a session: by session ID and by session ticket. In session ID, when the client requests a session ID with an empty session ID extension of ClientHello, the server side returns the corresponding session ID value with the session ID extension of ServerHello. The client makes a resume request using this session ID when making a resume request. The session ticket also gets the ticket by the session ticket extension and uses it when resuming.
+
+Resuming a session by session ID imposes a burden on the server side because it needs to retain its status in some way. In the case of a ticket, all the information required for restarting is included in the ticket, so the burden on the server side does not increase in that respect.
+
+In TLS 1.3, the previous session ID has been abolished, and session resumption has been unified into a session ticket. In addition, ClientHello's session ticket extension has been deprecated and the server will send a ticket in the previous session if there is a possibility of resuming a session (see 2.4 Post-Handshake Protocol).
 
 ### 2.2.3 Early Data
 In the case of PSK or session resumption, the information can be kept secret by using the key information of the previous session without waiting for the handshake. In TLS 1.3, Client Hello at the beginning of a TLS session has a TLS extension called Early Data Extension, which allows application data to be stored, encrypted, and sent. Early Data is also called 0-RTT because it is a concealed message without Round Trip.
@@ -202,7 +207,7 @@ The Compression Methods extension was an extension to show how to compress appli
 When a TLS connection is established by handshake, the target application data is sent and received, but some supplementary protocols are defined.
 
 #### 1) Session ticket
-The session ticket is the data used when resuming the session mentioned above. For sessions that may resume the session from the next time onward, the session ticket extension requests the session ticket from the server in Client Hello at the start of the handshake. After the handshake is completed and a secure session is established, the server sends the session ticket at an appropriate time. The client will use the received session ticket the next time the session resumes.
+The session ticket is the data used when resuming the session mentioned above. The server can send a session ticket at any time after the handshake is complete and a secure session is established. The client will use the received session ticket the next time the session resumes. The server can send session tickets multiple times if it allows the client side to connect multiple sessions at the same time.
 
 
 #### 2) Re-key generation, re-authentication

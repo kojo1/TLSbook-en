@@ -1,21 +1,17 @@
-|アルゴリズム| 署名スキーム	| ID	|
-|:----|:----:|:----:|
-|RSASSA PKCS#1 v1.5|                     |        |
-|                  | rsa_pcks1_sha256    | 0x0401 |
-|                  | rsa_pcks1_sha384    | 0x0501 |
-|                  | rsa_pcks1_sha512    | 0x0601 |
-|ECDSA             |                     |        |
-|                  | ecdsa_secp256r1     | 0x0403 |
-|                  | ecdsa_secp384r1     | 0x0503 |
-|                  | ecdsa_secp521r1     | 0x0603 |
-|RSASSA-PSS pub-key<br> OID rsaEncryption   ||        |
-|                  | rsa_pss_rsae_sha256 | 0x0804 |
-|                  | rsa_pss_rsae_sha384 | 0x0805 |
-|                  | rsa_pss_rsae_sha256 | 0x0806 |
-|EdDSA             |                     |        |
-|                  | ed25519             | 0x0807 |
-|                  | ed448               | 0x0808 |
-|RSASSA-PSS pub-key<br> OID RSASSA-PSS      ||        |
-|                  | rsa_pss_pss_sha256  | 0x0809 |
-|                  | rsa_pss_pss_sha384  | 0x080a |
-|                  | rsa_pss_pss_sha512  | 0x080b |
+|用途|導出関数|入力 ( IKM引数,|入力シークレット,|ラベル,|メッセージ )|出力 (生成シークレット or 導出される鍵)|
+|:--|:--|:--:|:--:|:--:|:--:|:--|
+|0-RTT||||||
+||HKDF-Extract|PSK|0|-|-|EarlySecret(ES)|
+||HKDF-Expand|-|ES|"ext binder\"\| \"res binder"|-|binder_key|
+||HKDF-Expand|-|ES|"e exp master"|ClientHello|early_exporter_master_secret|
+||HKDF-Expand|-|ES|"c exp master"|ClientHello|client_early_traffic_secret|
+|ハンドシェーク|||||||
+||HKDF-Extract|(EC)DHE|ES|"derived"|-|HandshakeSecret(HS)||
+||HKDF-Expand|-|HS|"c hs traffic"|ClientHello ~ ServerHello|client_handshake_traffic_secret|
+||HKDF-Expand|-|HS|"s hs traffic"|ClientHello ~ ServerHello|server_handshake_traffic_secret|
+|アプリ・データ|||||||
+||HKDF-Extract|0|HS|"derived"|-|MasterSecret(MS)||
+||HKDF-Expand|-|MS|"c ap traffic"|ClientHello ~ server Finished|client_application_traffic_secret_0|
+||HKDF-Expand|-|MS|"s ap traffic"|ClientHello ~ server Finished|server_application_traffic_secret_0|
+||HKDF-Expand|-|MS|"exp master"|ClientHello ~ server Finished|exporter_master_secret|
+||HKDF-Expand|-|MS|"res master"|ClientHello ~ server Finished|resumption_master_secret|

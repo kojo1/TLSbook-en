@@ -1,25 +1,17 @@
-
-
-
-|方式|TLS<br>バージョン|フェーズ|説明|
-|---|---|---|---|
-|セッションID|TLS1.2以前|要求|ClientHelloのSessionID拡張にて要求|
-|          |      |応答|ServerHelloのSessionIDにてIDを返却|
-|          |      |セッション<br>再開|ClientHelloのSessionIDにてIDを指定|
-|          |TLS1.3||廃止|
-||
-|セッションチケット|TLS1.2以前<br>RFC 5077|要求|ClientHelloのセッションチケット拡張にて要求|
-|               |      |応答|ServerHelloのセッションチケット拡張にて応答|
-|               |      |チケット<br>送付|ハンドシェーク後尾のNewSessionTicketにて送付|
-|               |      |セッション<br>再開|ClientHelloのセッションチケット拡張にて指定|
-|               |TLS1.3|   |セッションチケット拡張の廃止|
-|               |      |要求|クライアントからのチケット要求の廃止<br>発行の有無はサーバ側の判断に|
-|               |      |送付|ポストハンドシェークの<br>NewSessionTicketメッセージにて送付|
-|               |      |セッション<br>再開|PSKの0-RTTメッセージとしてチケットを送付|
-
-
-<div style="text-align: center;">
-<br>
-表2-4 セッション再開方式の比較
-
-</div>
+|用途|導出関数|入力 ( IKM引数,|入力シークレット,|ラベル,|メッセージ )|出力 (生成シークレット or 導出される鍵)|
+|:--|:--|:--:|:--:|:--:|:--:|:--|
+|0-RTT||||||
+||HKDF-Extract|PSK|0|-|-|EarlySecret(ES)|
+||HKDF-Expand|-|ES|"ext binder\"\| \"res binder"|-|binder_key|
+||HKDF-Expand|-|ES|"e exp master"|ClientHello|early_exporter_master_secret|
+||HKDF-Expand|-|ES|"c exp master"|ClientHello|client_early_traffic_secret|
+|ハンドシェーク|||||||
+||HKDF-Extract|(EC)DHE|ES|"derived"|-|HandshakeSecret(HS)||
+||HKDF-Expand|-|HS|"c hs traffic"|ClientHello ~ ServerHello|client_handshake_traffic_secret|
+||HKDF-Expand|-|HS|"s hs traffic"|ClientHello ~ ServerHello|server_handshake_traffic_secret|
+|アプリ・データ|||||||
+||HKDF-Extract|0|HS|"derived"|-|MasterSecret(MS)||
+||HKDF-Expand|-|MS|"c ap traffic"|ClientHello ~ server Finished|client_application_traffic_secret_0|
+||HKDF-Expand|-|MS|"s ap traffic"|ClientHello ~ server Finished|server_application_traffic_secret_0|
+||HKDF-Expand|-|MS|"exp master"|ClientHello ~ server Finished|exporter_master_secret|
+||HKDF-Expand|-|MS|"res master"|ClientHello ~ server Finished|resumption_master_secret|

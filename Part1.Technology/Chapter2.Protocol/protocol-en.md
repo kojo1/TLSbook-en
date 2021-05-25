@@ -96,7 +96,6 @@ In TLS, the key for subsequent encryption and decryption by common key cryptogra
 [Table 2-3 Key Derivation Schedule in TLS 1.3](./table2-3.md)
 
 ### 2.1.5 Peer authentication
-
 #### 1) Overview
 Another major purpose of handshake is peer authentication (server authentication by client, client authentication by server). Server authentication is mandatory for TLS and client authentication is optional. However, whenever the server side requests client authentication, the client side must respond to it.
 <br> <br>
@@ -120,10 +119,20 @@ Algorithm information about peer authentication is stored in each TLS extension.
 Table 2-4 lists the signature schemes that can be used with TLS 1.3.
 
 #### 5) Certificate validity verification
-Certificate revocation was initially achieved outside the scope of TLS handshakes, such as CRL and OCSP. OCSP Stapling incorporates it into the TLS extension as part of the handshake, and the specific mechanism is explained in Chapter 9 Certificates.
+
+The public key certificate can be revoked even before the expiration date in the event of an unforeseen situation such as the leakage of the private key. For this reason, the recipient must verify the validity of the certificate received.
+
+Obtaining certificate revocation information was initially achieved outside the scope of TLS handshakes, such as CRLs and OCSPs, through interactions between the client and the CA or OCSP responder on behalf of the CA. However, OCSP Stapling has incorporated them into TLS extensions as part of their handshake, and TLS 1.3 has organized them to this day. In OCSP Stapling, the certificate validity information is prepared at the same time as the certificate on the peer-authenticated side (in the case of server authentication, the server side). Therefore, the authenticating side (client side in the case of server authentication) can only check the validity of the handshake with the other side trying to establish a TLS session. Multiple authenticated parties
+You can bind authentication requests to the OCSP responder, which can significantly reduce traffic to and from the responder.
+
+In TLS1.3, the peer authentication protocol has been organized so that it is almost symmetrical for server authentication and client authentication. As a result, OCSP status confirmation requests can now be requested for both authentications. For server authentication
+Make a request with the OCSP_status_request extension on ClientHello and the status_reques extension on the CertificateRequest record for client authentication.
+
+The validity information from OCSP corresponds to the certificate in the certificate chain, and the OCSP response signed in each CertifycateEntry is returned. At this time, the time stamp is also returned, so the authenticator can check the freshness of the status information.
 
 
-## 2.2 Pre-shared key and session restart
+
+## 2.2 Pre-shared key and session resume
 ### 2.2.1 Pre-shared key (PSK)
 
 #### 1) PSK program

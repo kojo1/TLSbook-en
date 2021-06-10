@@ -3,7 +3,7 @@
 #include "example_common.h"
 
 #define DEFAULT_PORT 11111
-#define CERT_FILE "../../certs/tb-server-cert.pem"
+#define CERT_FILE "../../certs/tb-ca-cert.pem"
 
 int main(int argc, char** argv)
 {

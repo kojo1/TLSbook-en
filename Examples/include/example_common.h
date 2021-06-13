@@ -24,4 +24,10 @@
 #undef  SSL_FAILURE
 #define SSL_FAILURE 0
 
+#define DEFAULT_PORT 11111
+
+#define CA_CERT_FILE        "../../certs/tb-ca-cert.pem"
+#define SERVER_CERT_FILE    "../../certs/tb-server-cert.pem"
+#define SERVER_KEY_FILE     "../../certs/tb-server-key.pem"
+
 #endif /* _EAMPLE_COMMON_H_ */

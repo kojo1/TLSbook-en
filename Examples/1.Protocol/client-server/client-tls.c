@@ -4,14 +4,21 @@
  */
 #include "example_common.h"
 
+#define CA_CERT_FILE        "../../certs/tb-ca-cert.pem"
+#define LOCALHOST           "127.0.0.1"
+#define DEFAULT_PORT        11111
+
+#define MSG_SIZE            256
+#define REPLY_SIZE          MSG_SIZE + 1
+
 int main(int argc, char** argv)
 {
     FILE*               fin   = stdin  ;
     int                 sockfd;
     struct sockaddr_in  servAddr;
-    char                msg[1024];
-    char                reply[1024+1];
-    static char*        target_add = "127.0.0.1";
+    char                msg[MSG_SIZE];
+    char                reply[REPLY_SIZE];
+    static char*        target_add = LOCALHOST;
     char*               ipadd = NULL;
     size_t              sendSz;
     int                 ret, err;
@@ -131,7 +138,7 @@ int main(int argc, char** argv)
         if (ret != SSL_SUCCESS) {
             err = SSL_get_error(ssl, 0);
         }
-    } while (err == WC_PENDING_E);
+    } while (err == SSL_SUCCESS);
     
     if (ret != SSL_SUCCESS) {
         printf("ERROR: failed to connect to SSL(err %d, %s)\n", 
@@ -158,7 +165,7 @@ int main(int argc, char** argv)
                 err = SSL_get_error(ssl, 0);
             }
             
-        } while (err == WC_PENDING_E);
+        } while (err == SSL_SUCCESS);
         
         if (ret != sendSz) {
             printf("ERROR: failed to write entire message\n");
@@ -187,7 +194,7 @@ int main(int argc, char** argv)
             if (ret <= 0) {
                 err = SSL_get_error(ssl, 0);
             }
-        } while (err == WC_PENDING_E);
+        } while (err == SSL_SUCCESS);
         if (ret > 0) {
             reply[ret] = 0;
            /* 

@@ -4,6 +4,12 @@
  */
 #include "example_common.h"
 
+#define SERVER_CERT_FILE    "../../certs/tb-server-cert.pem"
+#define SERVER_KEY_FILE     "../../certs/tb-server-key.pem"
+
+#define DEFAULT_PORT        11111
+#define MSG_SIZE            256
+
 int main(int argc, char** argv)
 {
     int                sockfd;
@@ -11,7 +17,7 @@ int main(int argc, char** argv)
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
     socklen_t          size = sizeof(clientAddr);
-    char               buff[256];
+    char               buff[MSG_SIZE];
     size_t             len;
     int                shutdown = 0;
     int                reply_idx = 0;
@@ -140,7 +146,7 @@ int main(int argc, char** argv)
             if (ret != SSL_SUCCESS) {
                 err = SSL_get_error(ssl, 0);
             }
-        } while (err == WC_PENDING_E);
+        } while (err == SSL_SUCCESS);
         
         if (ret != SSL_SUCCESS) {
             printf("wolfSSL_accept error = %d\n",
@@ -162,7 +168,7 @@ int main(int argc, char** argv)
                 if (ret <= 0) {
                     err = SSL_get_error(ssl, 0);
                 }
-            } while (err == WC_PENDING_E);
+            } while (err == SSL_SUCCESS);
             if (ret > 0) {
                /* 
                 * Print to stdout any data the client sends 
@@ -183,7 +189,7 @@ int main(int argc, char** argv)
             if (strncmp(buff, "shutdown", 8) == 0) {
                 printf("Shutdown command issued!\n");
                 shutdown = 1;
-                break;
+                goto cleanup;
             }
             if (strncmp(buff, "break", 5) == 0) {
                 printf("close this session\n");
@@ -202,7 +208,7 @@ int main(int argc, char** argv)
                 if (ret <= 0) {
                     err = SSL_get_error(ssl, 0);
                 }
-            } while (err == WC_PENDING_E);
+            } while (err == SSL_SUCCESS);
             if (ret != len) {
                 printf("ERROR : Failed to write entire message\n");
                 printf("SSL_write error %d, %s\n", err,

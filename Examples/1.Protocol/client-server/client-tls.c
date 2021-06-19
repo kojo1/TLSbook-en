@@ -75,7 +75,13 @@ int main(int argc, char** argv)
     * Start of security
     *---------------------------------
     */
-     
+   /*
+    * Debugging Log On When enabled Debug Mode
+    */
+    #if defined(DEBUG_WOLFSSL)
+    wolfSSL_Debugging_ON();
+    #endif
+
    /* 
     * Initialize SSL
     */

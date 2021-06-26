@@ -43,13 +43,13 @@ static inline unsigned int My_Psk_Client_Cb(SSL* ssl, const char* hint,
 int main(int argc, char** argv)
 {
     FILE*              fin = stdin;
-    int                sockfd;
     struct sockaddr_in servAddr;
     char               msg[MSG_SIZE];
     char               reply[REPLY_SIZE];
     static char*       target_add = LOCALHOST;
     char*              ipadd = NULL;
     size_t             sendSz;
+    int                sockfd;
     int                ret, err;
 
    /* 
@@ -107,37 +107,37 @@ int main(int argc, char** argv)
    /*
     * Debugging Log On When enabled Debug Mode
     */
-    #if defined(DEBUG_WOLFSSL)
+#if defined(DEBUG_WOLFSSL)
     wolfSSL_Debugging_ON();
-    #endif
+#endif
 
    /* 
     * Initialize SSL
     */
     if ((ret = SSL_library_init()) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to initialize the library\n");
-        goto socket_cleanup;
+        goto cleanup;
     }
 
    /* 
     * Create and initialize WOLFSSL_CTX 
     */
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) {
-        fprintf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
+        fprintf(stderr, "ERROR: failed to create the SSL context object\n");
         ret = -1;
-        goto socket_cleanup;
+        goto cleanup;
     }
 
     /* set up pre shared keys */
     SSL_CTX_set_psk_client_callback(ctx, My_Psk_Client_Cb);
 
    /* 
-    * Create a SSL object 
+    * Create the SSL object
     */
     if ((ssl = SSL_new(ctx)) == NULL) {
-        fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
+        fprintf(stderr, "ERROR: failed to create the SSL object\n");
         ret = -1;
-        goto ctx_cleanup;
+        goto cleanup;
     }
     
    /* 
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
         goto cleanup;
     }
    /* 
-    * Attach SSL to the socket 
+    * Attach the socket to SSL
     */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
@@ -159,14 +159,12 @@ int main(int argc, char** argv)
    /* 
     * Connect to SSL on the server side 
     */
-    do {
-        err = 0;
-        ret = SSL_connect(ssl);
-        
-        if (ret != SSL_SUCCESS) {
-            err = SSL_get_error(ssl, 0);
-        }
-    } while (err == SSL_SUCCESS);
+    err = 0;
+    ret = SSL_connect(ssl);
+    
+    if (ret != SSL_SUCCESS) {
+        err = SSL_get_error(ssl, 0);
+    }
     
     if (ret != SSL_SUCCESS) {
         printf("ERROR: failed to connect to SSL(err %d, %s)\n", 
@@ -186,14 +184,11 @@ int main(int argc, char** argv)
        /*
         * send message to the server
         */
-        do {
-            err = 0;
-            ret = SSL_write(ssl, msg, sendSz);
-            if (ret != SSL_SUCCESS) {
-                err = SSL_get_error(ssl, 0);
-            }
-            
-        } while (err == SSL_SUCCESS);
+        err = 0;
+        ret = SSL_write(ssl, msg, sendSz);
+        if (ret != SSL_SUCCESS) {
+            err = SSL_get_error(ssl, 0);
+        }
         
         if (ret != sendSz) {
             printf("ERROR: failed to write entire message\n");
@@ -209,20 +204,15 @@ int main(int argc, char** argv)
             printf("sending server shutdown command: shutdown!\n");
             break;
         }
-        if (strncmp(msg, "break", 5) == 0) {
-            printf("sending close this session command: break!\n");
-            break;
-        }
        /*
         * read message from the server
         */
-        do {
-            err = 0;
-            ret = SSL_read(ssl, reply, sizeof(reply)-1);
-            if (ret <= 0) {
-                err = SSL_get_error(ssl, 0);
-            }
-        } while (err == SSL_SUCCESS);
+        err = 0;
+        ret = SSL_read(ssl, reply, sizeof(reply)-1);
+        if (ret <= 0) {
+            err = SSL_get_error(ssl, 0);
+        }
+        
         if (ret > 0) {
             reply[ret] = 0;
            /* 
@@ -234,7 +224,7 @@ int main(int argc, char** argv)
             fprintf(stderr, "ERROR : failed to read entire message\n");
             fprintf(stderr, "SSL_read error %d, %s\n", err,
                                               ERR_error_string(err, NULL));
-            fprintf(stderr, "%d bytes of %d bytes were sent", 
+            fprintf(stderr, "%d bytes of %d bytes were received", 
                                                         ret, (int) sendSz);
             ret = -1;
             goto cleanup;
@@ -246,13 +236,27 @@ int main(int argc, char** argv)
  * Cleanup and return 
  */
 cleanup:
-    SSL_shutdown(ssl);  /* Shutdown SSL to try to send "close notify" */
-                        /* alert to the peer                          */
-    SSL_free(ssl);      /* Free the SSL object                  */
-ctx_cleanup:
-    SSL_CTX_free(ctx);  /* Free the SSL context object          */
-socket_cleanup:
-    close(sockfd);      /* Close the connection to the server   */
+    if (ssl != NULL) {
+       /*
+        * Shutdown SSL to try to send "close notify" alert to the peer
+        */
+        SSL_shutdown(ssl);
+       /* 
+        * Free the SSL object 
+        */
+        SSL_free(ssl);
+    }
+    
+    if (ctx != NULL) {
+        /* 
+         * Free the SSL context object
+         */
+         SSL_CTX_free(ctx);
+    }
+    /*
+     * Close the connection to the server
+     */
+    close(sockfd);
 end:
-    return ret;         /* Return reporting a success           */
+    return ret;
 }

@@ -34,6 +34,8 @@ int main(int argc, char** argv)
     const char         *reply = "I hear ya fa shizzle!";
     int                ret;
 
+    len = strlen(reply);
+    
     /* Declare SSL objects */
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
@@ -124,7 +126,7 @@ int main(int argc, char** argv)
         while(1) {
             memset(buff, 0, sizeof(buff));
 
-            /* receive a message from the cliet */
+            /* receive a message from the client */
             if ((ret = SSL_read(ssl, buff, sizeof(buff)-1)) <= 0) {
                 print_SSL_error("failed SSL read", ssl);
                 break;

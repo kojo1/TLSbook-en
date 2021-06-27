@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <openssl/ssl.h>
+
 #include <openssl/err.h>
 
 #undef  SSL_SUCCESS

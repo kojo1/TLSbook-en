@@ -4,6 +4,8 @@
  */
 #include "example_common.h"
 
+#include <openssl/ssl.h>
+
 #define CA_CERT_FILE        "../../certs/tb-ca-cert.pem"
 #define LOCALHOST           "127.0.0.1"
 #define DEFAULT_PORT        11111
@@ -91,7 +93,7 @@ int main(int argc, char** argv)
     }
 
    /* 
-    * Create and initialize WOLFSSL_CTX 
+    * Create and initialize SSL_CTX 
     */
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) {
         fprintf(stderr, "ERROR: failed to create the SSL context object\n");
@@ -100,7 +102,7 @@ int main(int argc, char** argv)
     }
 
    /* 
-    * Load client certificates into the SSL context object 
+    * Load client certificates into an SSL context object 
     */
     if ((ret = SSL_CTX_load_verify_locations(ctx, CA_CERT_FILE, NULL))
          != SSL_SUCCESS) {
@@ -110,7 +112,7 @@ int main(int argc, char** argv)
     }
 
    /* 
-    * Create the SSL object
+    * Create an SSL object
     */
     if ((ssl = SSL_new(ctx)) == NULL) {
         fprintf(stderr, "ERROR: failed to create the SSL object\n");

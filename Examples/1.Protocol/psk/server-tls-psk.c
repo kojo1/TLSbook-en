@@ -3,6 +3,9 @@
  */
 #include "example_common.h"
 
+#include <openssl/ssl.h>
+
+
 #define SERVER_CERT_FILE    "../../certs/tb-server-cert.pem"
 #define SERVER_KEY_FILE     "../../certs/tb-server-key.pem"
 
@@ -51,7 +54,7 @@ int main(int argc, char** argv)
     const char*        reply = "I hear ya fa shizzle!";
 
    /* 
-    * Declare wolfSSL objects
+    * Declare SSL objects
     */
     SSL_CTX* ctx;
     SSL*     ssl;
@@ -147,7 +150,7 @@ int main(int argc, char** argv)
         }
         
        /*
-        * Create the SSL object
+        * Create an SSL object
         */
         if ((ssl = SSL_new(ctx)) == NULL) {
             fprintf(stderr, "ERROR: failed to create the SSL object\n");

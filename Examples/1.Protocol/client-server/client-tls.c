@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     char *ipadd = NULL;
     size_t sendSz;
     int sockfd = -1;
-
+  
 
     /* 
     * Declare SSL objects 
@@ -96,6 +96,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: failed to create the SSL object\n");
         goto cleanup;
     }
+
     /* Attach the socket to the SSL */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
@@ -171,3 +172,4 @@ cleanup:
         ret = SSL_FAILURE;
     return ret;
 }
+

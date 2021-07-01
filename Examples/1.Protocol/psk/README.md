@@ -1,9 +1,9 @@
-TLS Client/Server Example
+TLS PSK Client/Server Example
 ================
 
 ## Build && Install wolfSSL
 ```
-$ ./configure --enable-opensslextra
+$ ./configure --enable-opensslextra --enable-psk
 $ make
 $ make check
 $ sudo make install

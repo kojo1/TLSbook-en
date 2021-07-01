@@ -4,6 +4,9 @@
  */
 #include "example_common.h"
 
+#include <openssl/ssl.h>
+
+
 #define SERVER_CERT_FILE    "../../certs/tb-server-cert.pem"
 #define SERVER_KEY_FILE     "../../certs/tb-server-key.pem"
 
@@ -12,8 +15,6 @@
 
 int main(int argc, char** argv)
 {
-    int                sockfd;
-    int                connd;
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
     socklen_t          size = sizeof(clientAddr);
@@ -21,20 +22,22 @@ int main(int argc, char** argv)
     size_t             len;
     int                shutdown = 0;
     int                reply_idx = 0;
+    int                sockfd;
+    int                connd;
     int                ret, err;
     const char*        reply = "I hear ya fa shizzle!";
 
    /* 
-    * Declare wolfSSL objects
+    * Declare SSL objects
     */
     SSL_CTX* ctx;
     SSL*     ssl;
    /*
     * Debugging Log On When enabled Debug Mode
     */
-    #if defined(DEBUG_WOLFSSL)
+#if defined(DEBUG_WOLFSSL)
     wolfSSL_Debugging_ON();
-    #endif
+#endif
    /*
     * Initialize SSL 
     */
@@ -55,20 +58,20 @@ int main(int argc, char** argv)
     * Create and initialize SSL_CTX
     */
     if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
-        fprintf(stderr, "ERROR: failed to create SSL_CTX\n");
+        fprintf(stderr, "ERROR: failed to create the SSL context object\n");
         ret = -1;
-        goto socket_cleanup;
+        goto cleanup;
     }
 
    /*
-    * Load server certificates into SSL_CTX
+    * Load server certificates into an SSL context object
     */
     if (SSL_CTX_use_certificate_file(ctx, SERVER_CERT_FILE, SSL_FILETYPE_PEM)
         != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 SERVER_CERT_FILE);
         ret = 1;
-        goto ctx_cleanup;
+        goto cleanup;
     }
 
    /*
@@ -79,7 +82,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 SERVER_KEY_FILE);
         ret = 1;
-        goto ctx_cleanup;
+        goto cleanup;
     }
 
    /*
@@ -100,7 +103,7 @@ int main(int argc, char** argv)
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
         fprintf(stderr, "ERROR: failed to bind\n");
         ret = 1;
-        goto ctx_cleanup;
+        goto cleanup;
     }
 
    /* 
@@ -109,7 +112,7 @@ int main(int argc, char** argv)
     if (listen(sockfd, 5) == -1) {
         fprintf(stderr, "ERROR: failed to listen\n");
         ret = 1;
-        goto ctx_cleanup;
+        goto cleanup;
     }
 
    /* 
@@ -129,32 +132,30 @@ int main(int argc, char** argv)
         }
         
        /*
-        * Create a SSL object
+        * Create an SSL object
         */
         if ((ssl = SSL_new(ctx)) == NULL) {
-            fprintf(stderr, "ERROR: failed to create SSL object\n");
+            fprintf(stderr, "ERROR: failed to create the SSL object\n");
             ret = 1;
             goto cleanup;
         }
         
        /*
-        * Attach wolfSSL to the socket
+        * Attach the socket to SSL
         */
         SSL_set_fd(ssl, connd);
         
        /*
         * Establish TLS connection 
         */
-        do {
-            err = 0;
-            ret = SSL_accept(ssl);
-            if (ret != SSL_SUCCESS) {
-                err = SSL_get_error(ssl, 0);
-            }
-        } while (err == SSL_SUCCESS);
+        err = 0;
+        ret = SSL_accept(ssl);
+        if (ret != SSL_SUCCESS) {
+            err = SSL_get_error(ssl, 0);
+        }
         
         if (ret != SSL_SUCCESS) {
-            printf("wolfSSL_accept error = %d\n",
+            printf("SSL_accept error = %d\n",
                             SSL_get_error(ssl, ret));
             ret = 1;
             goto cleanup;
@@ -163,17 +164,17 @@ int main(int argc, char** argv)
         printf("Client connected successfully\n");
         
         while(1) {
-           /* 
-            * Read the client data into our buff array 
-            */
-           memset(buff, 0, sizeof(buff));
-            do {
-                err = 0; /* reset error */
-                ret = SSL_read(ssl, buff, sizeof(buff)-1);
-                if (ret <= 0) {
-                    err = SSL_get_error(ssl, 0);
-                }
-            } while (err == SSL_SUCCESS);
+            /* 
+             * Read the client data into our buff array 
+             */
+            memset(buff, 0, sizeof(buff));
+            
+            err = 0; /* reset error */
+            ret = SSL_read(ssl, buff, sizeof(buff)-1);
+            if (ret <= 0) {
+                err = SSL_get_error(ssl, 0);
+            }
+            
             if (ret > 0) {
                /* 
                 * Print to stdout any data the client sends 
@@ -196,10 +197,6 @@ int main(int argc, char** argv)
                 shutdown = 1;
                 goto cleanup;
             }
-            if (strncmp(buff, "break", 5) == 0) {
-                printf("close this session\n");
-                break;
-            }
            /* 
             * Write our reply into buff 
             */
@@ -207,13 +204,11 @@ int main(int argc, char** argv)
             sprintf(buff, "%s[%d]\n", reply, reply_idx++);
             len = strnlen(buff, sizeof(buff));
 
-            do {
-                err = 0; /* reset error */
-                ret = SSL_write(ssl, buff, len);
-                if (ret <= 0) {
-                    err = SSL_get_error(ssl, 0);
-                }
-            } while (err == SSL_SUCCESS);
+            err = 0; /* reset error */
+            ret = SSL_write(ssl, buff, len);
+            if (ret <= 0) {
+                err = SSL_get_error(ssl, 0);
+            }
             if (ret != len) {
                 printf("ERROR : Failed to write entire message\n");
                 printf("SSL_write error %d, %s\n", err,
@@ -236,13 +231,27 @@ int main(int argc, char** argv)
  * Cleanup and return 
  */
 cleanup:
-    SSL_shutdown(ssl);  /* Shutdown SSL to try to send "close notify"   */
-                        /* alert to the peer                            */
-    SSL_free(ssl);      /* Free the SSL object                          */
-ctx_cleanup:
-    SSL_CTX_free(ctx);  /* Free the SSL context object                  */
-socket_cleanup:
-    close(sockfd);      /* Close the connection to the server           */
+    if (ssl != NULL) {
+       /*
+        * Shutdown SSL to try to send "close notify" alert to the peer
+        */
+        SSL_shutdown(ssl);
+       /* 
+        * Free the SSL object 
+        */
+        SSL_free(ssl);
+    }
+    
+    if (ctx != NULL) {
+        /* 
+         * Free the SSL context object
+         */
+         SSL_CTX_free(ctx);
+    }
+    /*
+     * Close the connection to the server   
+     */
+    close(sockfd);
 end:
-    return ret;         /* Return reporting a success                   */
+    return ret;
 }

@@ -1,0 +1,37 @@
+# Ignore all
+*
+
+# Unignore all with extensions
+!*.*
+
+# Unignore all dirs
+!*/
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+*app
+
+# editor backup files
+*.bak
+*.BAK

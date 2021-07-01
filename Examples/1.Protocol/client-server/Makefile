@@ -14,12 +14,12 @@ SOBJ      = $(SSOURCE:.c=.o)
 ifeq ($(SSL),OPENSSL)
 INCLUDE   = -I../../include
 LDFLAGS   = -lcrypto -lssl
+CFLAGS    = -g -Wall $(INCLUDE) -DSSL_SUCCESS=1 -DSSL_FAILURE=0
 else
 INCLUDE   = -I../../include -I$(INSTALL_DIR)/include/wolfssl/ -include options.h
 LDFLAGS   = -lwolfssl
-endif
-
 CFLAGS    = -g -Wall $(INCLUDE)
+endif
 
 all: $(STARGET)$(SSL) $(CTARGET)$(SSL)
 

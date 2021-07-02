@@ -21,8 +21,8 @@ int main(int argc, char **argv)
     static char *target_add = LOCALHOST;
     char *ipadd = NULL;
     size_t sendSz;
-    int sockfd;
-
+    int sockfd = -1;
+  
 
     /* 
     * Declare SSL objects 
@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     SSL *ssl = NULL;
     int ret = SSL_FALURE;
     int err;
-    
+
     /* 
     * Check for proper calling convention
     */
@@ -96,7 +96,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: failed to create the SSL object\n");
         goto cleanup;
     }
- 　　/* Attach the socket to the SSL */
+
+    /* Attach the socket to the SSL */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
         goto cleanup;
@@ -114,7 +115,7 @@ int main(int argc, char **argv)
     * Application messages
     */
     while (1) {
-        /*　write a message to the server */
+        /* write a message to the serve */
         printf("Message for server: ");
         if(fgets(msg, sizeof(msg), fin) <= 0)
             break;
@@ -162,13 +163,13 @@ cleanup:
         SSL_shutdown(ssl);
         SSL_free(ssl);
     }
-    if (sockfd != NULL)
+    if (sockfd != -1)
         close(sockfd);
     if (ctx != NULL)
         SSL_CTX_free(ctx);
+
     if (ret != SSL_SUCCESS)
         ret = SSL_FAILURE;
-
     return ret;
 }
 

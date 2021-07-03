@@ -29,9 +29,12 @@ $(STARGET)$(SSL): $(SOBJ)
 $(CTARGET)$(SSL): $(COBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+openssl: 
+	all
+
 clean: FORCE
 	-rm -f *.o
-	-rm -f $(STARGET)$(SSL) $(CTARGET)$(SSL)
+	-rm -f $(STARGET)* $(CTARGET)*
 
 FORCE:
 .PHONY: FORCE

@@ -12,14 +12,13 @@
 #define DEFAULT_PORT        11111
 #define MSG_SIZE            256
 
-static void ssl_get_error(const char* msg, SSL* ssl)
+/* Print SSL error message */
+static void print_SSL_error(const char *msg, SSL *ssl)
 {
     int err;
-
     err = SSL_get_error(ssl, 0);
-    fprintf(stderr, "ERROR : %s (err %d, %s)\n", msg, err,
-                    ERR_error_string(err, NULL));
-
+    fprintf(stderr, "ERROR: %s (err %d, %s)\n", msg, err,
+            ERR_error_string(err, NULL));
 }
 
 int main(int argc, char** argv)
@@ -32,9 +31,8 @@ int main(int argc, char** argv)
     
     char               buff[MSG_SIZE];
     int                len;
-
+    const char         *reply = "I hear ya fa shizzle!";
     int                ret;
-    const char*        reply = "I hear ya fa shizzle!";
 
     /* Declare SSL objects */
     SSL_CTX* ctx = NULL;
@@ -73,7 +71,7 @@ int main(int argc, char** argv)
     * Create a socket, bind and listen
     */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        fprintf(stderr, "ERROR: failed to create a socket errno %d\n", errno);
+        fprintf(stderr, "ERROR: failed to create a socket. errno %d\n", errno);
         goto cleanup;
     }
     memset(&servAddr, 0, sizeof(servAddr));
@@ -83,12 +81,12 @@ int main(int argc, char** argv)
     servAddr.sin_addr.s_addr = INADDR_ANY;          /* from anywhere   */
 
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
-        fprintf(stderr, "ERROR: failed to bind errno %d\n", errno);
+        fprintf(stderr, "ERROR: failed to bind. errno %d\n", errno);
         goto cleanup;
     }
 
     if (listen(sockfd, 5) == -1) {
-        fprintf(stderr, "ERROR: failed to listen errno %d\n", errno);
+        fprintf(stderr, "ERROR: failed to listen. errno %d\n", errno);
         goto cleanup;
     }
 
@@ -98,13 +96,13 @@ int main(int argc, char** argv)
         
        /* Accept client connections */
         if ((connd = accept(sockfd, (struct sockaddr*)&clientAddr, &size)) == -1) {
-            fprintf(stderr, "ERROR: failed to accept the connection errno %d\n", errno);
+            fprintf(stderr, "ERROR: failed to accept. errno %d\n", errno);
             goto cleanup;
         }
         
        /* Create an SSL object */
         if ((ssl = SSL_new(ctx)) == NULL) {
-            fprintf(stderr, "ERROR: failed to create the SSL object\n");
+            fprintf(stderr, "ERROR: failed to create an SSL object\n");
             goto cleanup;
         }
         
@@ -113,39 +111,38 @@ int main(int argc, char** argv)
         
        /*Establish TLS connection  */
         if ((ret = SSL_accept(ssl)) != SSL_SUCCESS) {
-            ssl_get_error("failed SSL accept", ssl);
+            print_SSL_error("failed SSL accept", ssl);
             goto cleanup;
         }
         
         printf("Client connected successfully\n");
-        
+
+        /* 
+        * Application messaging
+        */
         while(1) {
-            /* Read the client data into our buff array */
             memset(buff, 0, sizeof(buff));
-            
+
+            /* receive a message from the cliet */
             if ((ret = SSL_read(ssl, buff, sizeof(buff)-1)) <= 0) {
-                ssl_get_error("failed SSL read", ssl);
+                print_SSL_error("failed SSL read", ssl);
                 break;
             }
             else {
                 /* Print to stdout any data the client sends  */
-                printf("Client: %s\n", buff);
+                printf("Received: %s\n", buff);
             }
             
            /* Check for server shutdown command */
             if (strncmp(buff, "shutdown", 8) == 0) {
-                printf("Shutdown command issued!\n");
+                printf("Received shutdown command\n");
                 goto cleanup;
             }
-           /* Write our reply into buff */
-            if ((len = sprintf(buff, "%s\n", reply)) < 0) {
-                fprintf(stderr, "ERROR : failed sprintf err %d\n", len);
-                goto cleanup;
-            } 
-            
-            if ((ret = SSL_write(ssl, buff, len)) != len) {
+
+            /* send the reply to the client */
+            if ((ret = SSL_write(ssl, reply, strlen(reply))) != len) {
                 if (ret < 0) {
-                    ssl_get_error("failed SSL write", ssl);
+                    print_SSL_error("failed SSL write", ssl);
                     ret = SSL_FAILURE;
                     break;
                 }
@@ -155,15 +152,13 @@ int main(int argc, char** argv)
         if (ssl != NULL && ret <= 0) {
             SSL_shutdown(ssl);
         }
-        /* Cleanup after this connection */
+        /* Cleanup after the connection */
         SSL_free(ssl); 
         ssl = NULL;
-
         close(connd);
         connd = -1;
+        printf("Closed the connection\n");
     }
-
-    printf("Shutdown complete\n");
 
 /*  Cleanup and return */
 cleanup:
@@ -178,6 +173,6 @@ cleanup:
         SSL_CTX_free(ctx);
     if (ret != SSL_SUCCESS)
         ret = SSL_FAILURE;
-    
+    printf("End of TLS Server\n");
     return ret;
 }

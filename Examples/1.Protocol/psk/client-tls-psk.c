@@ -12,15 +12,10 @@
 #define PSK_KEY_LEN         4
 
 #define MSG_SIZE            256
-#define REPLY_SIZE          MSG_SIZE + 1
 
 static const char* kIdentityStr = "Client_identity";
-/*
- *psk client set up.
- */
-/*
- *psk client set up.
- */
+
+/* psk client set up */
 static inline unsigned int My_Psk_Client_Cb(SSL* ssl, const char* hint,
         char* identity, unsigned int id_max_len, unsigned char* key,
         unsigned int key_max_len)
@@ -42,223 +37,146 @@ static inline unsigned int My_Psk_Client_Cb(SSL* ssl, const char* hint,
     return PSK_KEY_LEN;
 }
 
-int main(int argc, char** argv)
+/* Print SSL error message */
+static void print_SSL_error(const char* msg, SSL* ssl)
 {
-    FILE*              fin = stdin;
-    struct sockaddr_in servAddr;
-    char               msg[MSG_SIZE];
-    char               reply[REPLY_SIZE];
-    static char*       target_add = LOCALHOST;
-    char*              ipadd = NULL;
-    size_t             sendSz;
-    int                sockfd;
-    int                ret, err;
+    int err;
+    err = SSL_get_error(ssl, 0);
+    fprintf(stderr, "ERROR: %s (err %d, %s)\n", msg, err,
+                    ERR_error_string(err, NULL));
+}
 
-   /* 
-    * Declare SSL objects 
-    */
+int main(int argc, char **argv)
+{
+    struct sockaddr_in servAddr;
+    int                sockfd = -1;
+    char                *ipadd = NULL;
+
+    char               msg[MSG_SIZE];
+    size_t             sendSz;
+    int                ret = SSL_FAILURE;
+
+    /* SSL objects */
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
 
-   /* 
-    * Check for proper calling convention
-    */
-    if (argc != 2) {
-        printf("use localhost(%s) as server ip address\n", target_add);
-        ipadd = (char*)target_add;
-    }
-    else {
-        ipadd = (char*)&argv[1];
-    }
-
-   /*
-    * Create a socket that uses an internet IPv4 address,
-    * Sets the socket to be stream based (TCP),
-    * 0 means choose the default protocol. 
-    */
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        fprintf(stderr, "ERROR: failed to create the socket\n");
-        ret = -1;
-        goto end;
-    }
-
-   /* 
-    * Initialize the server address struct with zeros 
-    */
-    memset(&servAddr, 0, sizeof(servAddr));
-
-   /* 
-    * Fill in the server address 
-    */
-    servAddr.sin_family = AF_INET;             /* using IPv4      */
-    servAddr.sin_port   = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
-
-   /* 
-    * Get the server IPv4 address from the command line call
-    */
-    if (inet_pton(AF_INET, ipadd, &servAddr.sin_addr) != 1) {
-        fprintf(stderr, "ERROR: invalid address\n");
-        ret = -1;
-        goto end;
-    }
-
-   /*---------------------------------
-    * Start of security
-    *---------------------------------
-    */
-   /*
-    * Debugging Log On When enabled Debug Mode
-    */
-#if defined(DEBUG_WOLFSSL)
-    wolfSSL_Debugging_ON();
-#endif
-
-   /* 
-    * Initialize SSL
-    */
-    if ((ret = SSL_library_init()) != SSL_SUCCESS) {
-        fprintf(stderr, "ERROR: Failed to initialize the library\n");
+    /* Check for proper calling convention */
+    if (argc == 2) {
+        ipadd = (char *)argv[1];
+    } else if (argc == 1) {
+        printf("Send to localhost(%s)\n", LOCALHOST);
+        ipadd = LOCALHOST;
+    } else {
+        printf("ERROR: Too many arguments.\n");
         goto cleanup;
     }
 
-   /* 
-    * Create and initialize SSL_CTX 
-    */
+    /* Initialize library */
+    if (SSL_library_init() != SSL_SUCCESS) {
+        printf("ERROR: failed to initialize the library\n");
+        goto cleanup;
+    }
+
+#if defined(DEBUG_WOLFSSL)
+    wolfSSL_Debugging_ON(); /* Debug log when Debug Mode is enabled */
+#endif
+    
+    /* Create and initialize an SSL context object*/
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) {
-        fprintf(stderr, "ERROR: failed to create the SSL context object\n");
-        ret = -1;
+        fprintf(stderr, "ERROR: failed to create an SSL context object\n");
         goto cleanup;
     }
 
     /* set up pre shared keys */
     SSL_CTX_set_psk_client_callback(ctx, My_Psk_Client_Cb);
 
-   /* 
-    * Create an SSL object
+
+    /* 
+    * Set up a TCP Socket and connect to the server 
     */
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        fprintf(stderr, "ERROR: failed to create a socket. errno %d\n", errno);
+        goto cleanup;
+    }
+    memset(&servAddr, 0, sizeof(servAddr));
+    servAddr.sin_family = AF_INET;           /* using IPv4      */
+    servAddr.sin_port = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
+    if ((ret = inet_pton(AF_INET, ipadd, &servAddr.sin_addr)) != 1) {
+        fprintf(stderr, "ERROR : failed inet_pton. errno %d\n", errno);
+        goto cleanup;
+    }
+    if ((ret = connect(sockfd, (struct sockaddr *)&servAddr, sizeof(servAddr))) == -1) {
+        fprintf(stderr, "ERROR: failed to connect. errno %d\n", errno);
+        goto cleanup;
+    }
+
+    /* Create an SSL object */
     if ((ssl = SSL_new(ctx)) == NULL) {
-        fprintf(stderr, "ERROR: failed to create the SSL object\n");
-        ret = -1;
+        fprintf(stderr, "ERROR: failed to create an SSL object\n");
         goto cleanup;
     }
-    
-   /* 
-    * Connect to the server 
-    */
-    if ((ret = connect(sockfd, (struct sockaddr*) &servAddr, sizeof(servAddr)))
-         == -1) {
-        fprintf(stderr, "ERROR: failed to connect\n");
-        goto cleanup;
-    }
-   /* 
-    * Attach the socket to SSL
-    */
+
+    /* Attach the socket to the SSL */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
         goto cleanup;
     }
-    
-   /* 
-    * Connect to SSL on the server side 
-    */
-    err = 0;
-    ret = SSL_connect(ssl);
-    
-    if (ret != SSL_SUCCESS) {
-        err = SSL_get_error(ssl, 0);
-    }
-    
-    if (ret != SSL_SUCCESS) {
-        printf("ERROR: failed to connect to SSL(err %d, %s)\n", 
-            ret, ERR_error_string(err, NULL));
+    /* SSL connect to the server */
+    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
+        print_SSL_error("failed SSL connet", ssl);
         goto cleanup;
     }
-    
+
    /* 
-    * Message to the server from stdin
-    * Read message from the server
+    * Application messaging
     */
-    printf("Message for server: ");
-    while (fgets(msg, sizeof(msg), fin) != 0) {
-        
-        sendSz = strnlen(msg, sizeof(msg));
-        
-       /*
-        * send message to the server
-        */
-        err = 0;
-        ret = SSL_write(ssl, msg, sendSz);
-        if (ret != SSL_SUCCESS) {
-            err = SSL_get_error(ssl, 0);
-        }
-        
-        if (ret != sendSz) {
-            printf("ERROR: failed to write entire message\n");
-            printf("SSL_write error %d, %s\n", err,
-                                              ERR_error_string(err, NULL));
-            printf("%d bytes of %d bytes were sent", 
-                                                        ret, (int) sendSz);
-            ret = -1;
-            goto cleanup;
-        }
-        
-        if (strncmp(msg, "shutdown", 8) == 0) {
-            printf("sending server shutdown command: shutdown!\n");
+    while (1) {
+        printf("Message to send: ");
+        if(fgets(msg, sizeof(msg), stdin) <= 0)
             break;
-        }
-       /*
-        * read message from the server
-        */
-        err = 0;
-        ret = SSL_read(ssl, reply, sizeof(reply)-1);
-        if (ret <= 0) {
-            err = SSL_get_error(ssl, 0);
-        }
-        
-        if (ret > 0) {
-            reply[ret] = 0;
-           /* 
-            * Print to stdout any data the server sends 
-            */
-            printf("Server: %s\n", reply);
-        }
-        else {
-            fprintf(stderr, "ERROR : failed to read entire message\n");
-            fprintf(stderr, "SSL_read error %d, %s\n", err,
-                                              ERR_error_string(err, NULL));
-            fprintf(stderr, "%d bytes of %d bytes were received", 
-                                                        ret, (int) sendSz);
-            ret = -1;
-            goto cleanup;
+        sendSz = strnlen(msg, sizeof(msg));
+
+        /* send a message to the server */
+        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) {
+            if (ret < 0) {
+                print_SSL_error("failed SSL write", ssl);
+                break;
+            } else {
+                /* only with SSL_MODE_ENABLE_PARTIAL_WRITE mode */ 
+                fprintf(stderr, "%d bytes of %d bytes were sent\n",
+                        ret, (int)sendSz);
+            }
         }
 
-        printf("Message for server: ");
+        if (strncmp(msg, "shutdown", 8) == 0) {
+            printf("Sending shutdown command\n");
+            ret = SSL_SUCCESS;
+            break;
+        }
+
+        /* receive a message from the server */
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) {
+                    msg[ret] = '\0';
+                    printf("Received: %s\n", msg);
+        } else {
+            print_SSL_error("failed SSL read", ssl);
+            break;
+        }
     }
-/* 
- * Cleanup and return 
- */
+
+/*  Cleanup and return */
 cleanup:
     if (ssl != NULL) {
-       /*
-        * Shutdown SSL to try to send "close notify" alert to the peer
-        */
         SSL_shutdown(ssl);
-       /* 
-        * Free the SSL object 
-        */
         SSL_free(ssl);
     }
-    
-    if (ctx != NULL) {
-        /* 
-         * Free the SSL context object
-         */
-         SSL_CTX_free(ctx);
-    }
-    /*
-     * Close the connection to the server
-     */
-    close(sockfd);
-end:
+    if (sockfd != -1)
+        close(sockfd);
+    if (ctx != NULL)
+        SSL_CTX_free(ctx);
+    if (ret != SSL_SUCCESS)
+        ret = SSL_FAILURE;
+    printf("End of TLS Client\n");
     return ret;
 }
+

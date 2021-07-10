@@ -138,6 +138,12 @@ int main(int argc, char** argv)
                 break;
             }
 
+            /* Check break command, close the session */
+            if (strncmp(buff, "break", 5) == 0) {
+                printf("Received break commad\n");
+                ret = SSL_SUCCESS;
+                break;
+            }
             /* send the reply to the client */
             if ((ret = SSL_write(ssl, reply, len)) < 0) {
                 if (ret < 0) {

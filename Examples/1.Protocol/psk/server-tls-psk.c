@@ -157,7 +157,7 @@ int main(int argc, char** argv)
             }
 
             /* send the reply to the client */
-            if ((ret = SSL_write(ssl, reply, len)) != len) {
+            if ((ret = SSL_write(ssl, reply, len)) < 0) {
                 if (ret < 0) {
                     print_SSL_error("failed SSL write", ssl);
                     ret = SSL_FAILURE;

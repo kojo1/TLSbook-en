@@ -49,10 +49,9 @@ int main(int argc, char **argv)
     while (1) {
         送信メッセージを入力
 
-        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) { /* サーバに送信 */
+        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) { /* メッセージ送信 */
             if (ret < 0) {
-                SSL詳細エラーメッセージ出力
-                break;
+                SSL詳細エラーメッセージ出力; break;
             } else {
                 /* このパスはSSL_MODE_ENABLE_PARTIAL_WRITEのみで発生 */ 
                 実際に送信できたメッセージ長を表示
@@ -61,11 +60,10 @@ int main(int argc, char **argv)
 
         "shutdown" ならばbreak
 
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) {　/* メッセージを受信 */
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) {　/* メッセージ受信 */
             受信メッセージを出力
         } else {
-            SSL詳細エラーメッセージ出力
-            break;
+            SSL詳細エラーメッセージ出力; break;
         }
     }
 

@@ -20,14 +20,12 @@ TLS接続の際にピア認証を行います。サンプルプログラムで�
 
 int main(int argc, char **argv)
 {
-    ソケット用変数
-    メッセージ用変数
+    ソケット用変数, メッセージ用変数の定義
 
     SSL_CTX* ctx = NULL;    /* SSLコンテクスト */
     SSL*     ssl = NULL;    /* SSLオブジェクト */
 
-    if (SSL_library_init() != SSL_SUCCESS)　    /* ライブラリの初期化 */
-        { エラーメッセージ出力; goto cleanup; }
+    ライブラリの初期化 
 
     /*　SSLコンテクストの確保し、CA証明書をロード　*/
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
@@ -48,25 +46,13 @@ int main(int argc, char **argv)
     /* アプリケーション層のメッセージング　*/
     while (1) {
         送信メッセージを入力
-
-        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) { /* メッセージ送信 */
-            if (ret < 0) {
-                SSL詳細エラーメッセージ出力; break;
-            } else {
-                /* このパスはSSL_MODE_ENABLE_PARTIAL_WRITEのみで発生 */ 
-                実際に送信できたメッセージ長を表示
-            }
-        }
-
+        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) /* メッセージ送信 */
+            { SSL詳細エラーメッセージ出力; break; }
         "shutdown" ならばbreak
-
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) {　/* メッセージ受信 */
-            受信メッセージを出力
-        } else {
-            SSL詳細エラーメッセージ出力; break;
-        }
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) /* メッセージ受信 */
+            { SSL詳細エラーメッセージ出力; break;}
+        受信メッセージを出力
     }
-
 cleanup:
     リソースの解放
 }
@@ -104,13 +90,13 @@ cleanup:
 
 #### 3) 主なAPI
 - SSL_CTX_load_verify_locations<br>
-サーバ認証のためのCA証明書をTLSコンテクストにロードします(関連APIは表6.1.3 ピア認証関連のAPIを参照)。
+この例では、サーバ認証のためにクライアント側でCA証明書をTLSコンテクストにロードします。クライアント認証のためにサーバ側でも使用します。(関連APIは表6.1.3 ピア認証関連のAPIを参照)
 
 - SSL_CTX_use_certificate_file<br>
-サーバ認証のためのサーバ証明書をTLSコンテクストにロードします(関連APIは表6.1.3 ピア認証関連のAPIを参照)。
+この例では、サーバ認証のためにサーバ側でサーバ証明書をTLSコンテクストにロードします。クライアント認証のためにクライアント側でも使用します。(関連APIは表6.1.3 ピア認証関連のAPIを参照)
 
 - SSL_CTX_use_privateKey_file<br>
-サーバ認証のためのプライベート鍵をTLSコンテクストにロードします(関連APIは表6.1.3 ピア認証関連のAPIを参照)。
+この例では、サーバ認証のためにサーバ側でプライベート鍵をTLSコンテクストにロードします。クライアント認証のためにクライアント側でも使用します。(関連APIは表6.1.3 ピア認証関連のAPIを参照)
 
 - SSL_connect<br>
 クライアントからサーバにTLS接続を要求するAPIです。サーバとのTCP接続が完了している状態で、SSL_newで確保したSSLを指定してこのAPIで接続を要求します。TLSバージョンや暗号スイートの合意、サーバ認証などのハンドシェークを行います。すべての処理が正常に完了するとこのAPIは正常終了を返却します。
@@ -161,7 +147,7 @@ SSL_connectでTLS接続を要求します。
 　クライアント側と同様に、SSL_read, SSL_writeを呼び出しますが、送受信が逆順となります。
 <br><br>
 
-#### 5) メッセージサイズとTLSレコード<br>
+#### 5) その他の注意点
 TLSのセキュリティを確保するために、SSL_write、SSL_readで通信するメッセージは以下のような対応関係が維持されます。
 
 デフォルトでは、1回のSSL_write呼び出しによるメッセージは一つのTLSレコードとして送信されます。一つのTLSレコードのメッセージは１回ないし複数回のSSL_readします。SSL_readで指定するメッセージ長は送信側と同じか長い場合は１回で受信されます。送られてきたTLSレコードのサイズのほうがSSL_readで指定したメッセージサイズより長い場合は次のSSL_readで受信されます。

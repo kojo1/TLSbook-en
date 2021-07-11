@@ -49,7 +49,7 @@ int main(int argc, char **argv)
         if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) /* メッセージ送信 */
             { SSL詳細エラーメッセージ出力; break; }
         "shutdown" ならばbreak
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) /* メッセージ受信 */
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0) /* メッセージ受信 */
             { SSL詳細エラーメッセージ出力; break;}
         受信メッセージを出力
     }

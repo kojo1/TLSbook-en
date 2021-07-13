@@ -25,19 +25,19 @@ static unsigned int my_psk_server_cb(SSL* ssl, const char* identity,
                            unsigned char* key, unsigned int key_max_len)
 {
     (void)ssl;
-    (void)key_max_len;
 
     if (strncmp(identity, "Client_identity", 15) != 0) {
         printf("error!\n");
         return 0;
     }
 
-    key[0] = 26;
-    key[1] = 43;
-    key[2] = 60;
-    key[3] = 77;
-
-    return PSK_KEY_LEN;
+    key = (unsigned char*)"\x1a\x2b\x3c\x4d";
+    if (strlen((const char*)key) < key_max_len) {
+        return strlen((const char*)key);
+    }
+    else {
+        return 0;
+    }
 }
 
 /* Print SSL error message */
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     wolfSSL_Debugging_ON(); /* Debug log when Debug Mode is enabled */
 #endif
 
-   /* Create and initialize an SSL context object */
+    /* Create and initialize an SSL context object */
     if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
         fprintf(stderr, "ERROR: failed to create an SSL context object\n");
         goto cleanup;
@@ -110,26 +110,25 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
-   /* Continue to accept clients until shutdown is issued */
     while (1) {
         printf("Waiting for a connection...\n");
         
-       /* Accept client connections */
+        /* Accept client connections */
         if ((connd = accept(sockfd, (struct sockaddr*)&clientAddr, &size)) == -1) {
             fprintf(stderr, "ERROR: failed to accept. errno %d\n", errno);
             goto cleanup;
         }
         
-       /* Create an SSL object */
+        /* Create an SSL object */
         if ((ssl = SSL_new(ctx)) == NULL) {
             fprintf(stderr, "ERROR: failed to create an SSL object\n");
             goto cleanup;
         }
         
-       /* Attach a socket to SSL */
+       /* Attach the socket to the SSL */
         SSL_set_fd(ssl, connd);
         
-       /*Establish TLS connection  */
+       /* Establish TLS connection  */
         if ((ret = SSL_accept(ssl)) != SSL_SUCCESS) {
             print_SSL_error("failed SSL accept", ssl);
             goto cleanup;
@@ -148,15 +147,13 @@ int main(int argc, char** argv)
                 print_SSL_error("failed SSL read", ssl);
                 break;
             }
-            else {
-                /* Print to stdout any data the client sends  */
-                printf("Received: %s\n", buff);
-            }
-            
-           /* Check for server shutdown command */
+            buff[ret] = '\0';
+            printf("Received: %s\n", buff);
+
+            /* Check for server shutdown command */
             if (strncmp(buff, "shutdown", 8) == 0) {
                 printf("Received shutdown command\n");
-                goto cleanup;
+                break;
             }
 
             /* send the reply to the client */
@@ -168,11 +165,14 @@ int main(int argc, char** argv)
                 }
                 fprintf(stderr, "%d bytes of %d bytes were sent\n", ret, len);
             }
+             /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+            if (ret != len) {
+                fprintf(stderr, "Partial write\n");
+            }
         }
-        if (ssl != NULL && ret <= 0) {
-            SSL_shutdown(ssl);
-        }
+
         /* Cleanup after the connection */
+        SSL_shutdown(ssl);
         SSL_free(ssl); 
         ssl = NULL;
         close(connd);

@@ -147,9 +147,12 @@ int main(int argc, char** argv)
                 }
                 fprintf(stderr, "%d bytes of %d bytes were sent\n", ret, len);
             }
-            if ((ret != strlen(reply)) /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+             /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+            if (ret != len) {
                 fprintf(stderr, "Partial write\n");
+            }
         }
+
         /* Cleanup after the connection */
         SSL_shutdown(ssl);
         SSL_free(ssl); 

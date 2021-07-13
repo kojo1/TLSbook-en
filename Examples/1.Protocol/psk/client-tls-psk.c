@@ -16,25 +16,24 @@
 static const char* kIdentityStr = "Client_identity";
 
 /* psk client set up */
-static inline unsigned int My_Psk_Client_Cb(SSL* ssl, const char* hint,
+static inline unsigned int my_psk_client_cb(SSL* ssl, const char* hint,
         char* identity, unsigned int id_max_len, unsigned char* key,
         unsigned int key_max_len)
 {
     (void)ssl;
     (void)hint;
-    (void)key_max_len;
 
-    /* identity is OpenSSL testing default for openssl s_client, keep same*/
+    /* The identity is OpenSSL testing default */
     strncpy(identity, kIdentityStr, id_max_len);
+    /* The key is an example in OpenSSL man page */
+    key = (unsigned char*)"\x1a\x2b\x3c\x4d";
 
-    /* test key n hex is 0x1a2b3c4d , in decimal 439,041,101, we're using
-     * unsigned binary */
-    key[0] = 26;
-    key[1] = 43;
-    key[2] = 60;
-    key[3] = 77;
-
-    return PSK_KEY_LEN;
+    if (strlen((const char*)key) < key_max_len) {
+        return strlen((const char*)key);
+    }
+    else {
+        return 0;
+    }
 }
 
 /* Print SSL error message */
@@ -88,7 +87,7 @@ int main(int argc, char **argv)
     }
 
     /* set up pre shared keys */
-    SSL_CTX_set_psk_client_callback(ctx, My_Psk_Client_Cb);
+    SSL_CTX_set_psk_client_callback(ctx, my_psk_client_cb);
 
 
     /* 
@@ -123,7 +122,7 @@ int main(int argc, char **argv)
     }
     /* SSL connect to the server */
     if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
-        print_SSL_error("failed SSL connet", ssl);
+        print_SSL_error("failed SSL connect", ssl);
         goto cleanup;
     }
 
@@ -137,17 +136,15 @@ int main(int argc, char **argv)
         sendSz = strnlen(msg, sizeof(msg));
 
         /* send a message to the server */
-        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) {
-            if (ret < 0) {
-                print_SSL_error("failed SSL write", ssl);
-                break;
-            } else {
-                /* only with SSL_MODE_ENABLE_PARTIAL_WRITE mode */ 
-                fprintf(stderr, "%d bytes of %d bytes were sent\n",
-                        ret, (int)sendSz);
-            }
+        if ((ret = SSL_write(ssl, msg, sendSz)) < 0) {
+            print_SSL_error("failed SSL write", ssl);
+            break;
         }
-
+        /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+        if (ret != sendSz) {
+            fprintf(stderr, "Partial write\n");
+        }
+        
         if (strncmp(msg, "shutdown", 8) == 0) {
             printf("Sending shutdown command\n");
             ret = SSL_SUCCESS;
@@ -155,13 +152,12 @@ int main(int argc, char **argv)
         }
 
         /* receive a message from the server */
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) {
-                    msg[ret] = '\0';
-                    printf("Received: %s\n", msg);
-        } else {
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0) {
             print_SSL_error("failed SSL read", ssl);
             break;
         }
+        msg[ret] = '\0';
+        printf("Received: %s\n", msg);
     }
 
 /*  Cleanup and return */

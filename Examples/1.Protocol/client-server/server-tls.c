@@ -38,6 +38,8 @@ int main(int argc, char** argv)
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
 
+    len = strlen(reply);
+
     /* Initialize library */
     if (SSL_library_init() != SSL_SUCCESS) {
         printf("ERROR: Failed to initialize the library\n");
@@ -136,14 +138,21 @@ int main(int argc, char** argv)
                 break;
             }
 
-            /* send a reply to the client */
-            if ((ret = SSL_write(ssl, reply, strlen(reply))) < 0) {
-                print_SSL_error("failed SSL write", ssl);
-                break;
+            /* send the reply to the client */
+            if ((ret = SSL_write(ssl, reply, len)) != len) {
+                if (ret < 0) {
+                    print_SSL_error("failed SSL write", ssl);
+                    ret = SSL_FAILURE;
+                    break;
+                }
+                fprintf(stderr, "%d bytes of %d bytes were sent\n", ret, len);
             }
-            if ((ret != strlen(reply)) /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+             /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+            if (ret != len) {
                 fprintf(stderr, "Partial write\n");
+            }
         }
+
         /* Cleanup after the connection */
         SSL_shutdown(ssl);
         SSL_free(ssl); 

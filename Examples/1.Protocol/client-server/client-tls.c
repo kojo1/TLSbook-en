@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     }
     /* SSL connect to the server */
     if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
-        print_SSL_error("failed SSL connet", ssl);
+        print_SSL_error("failed SSL connect", ssl);
         goto cleanup;
     }
 
@@ -117,8 +117,10 @@ int main(int argc, char **argv)
             print_SSL_error("failed SSL write", ssl);
             break;
         }
-        if ((ret != sendSz) /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+        /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+        if (ret != sendSz) {
             fprintf(stderr, "Partial write\n");
+        }
 
         if (strncmp(msg, "shutdown", 8) == 0) {
             printf("Sending shutdown command\n");

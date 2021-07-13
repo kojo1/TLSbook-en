@@ -113,16 +113,12 @@ int main(int argc, char **argv)
         sendSz = strnlen(msg, sizeof(msg));
 
         /* send a message to the server */
-        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) {
-            if (ret < 0) {
-                print_SSL_error("failed SSL write", ssl);
-                break;
-            } else {
-                /* only with SSL_MODE_ENABLE_PARTIAL_WRITE mode */ 
-                fprintf(stderr, "%d bytes of %d bytes were sent\n",
-                        ret, (int)sendSz);
-            }
+        if ((ret = SSL_write(ssl, msg, sendSz)) < 0) {
+            print_SSL_error("failed SSL write", ssl);
+            break;
         }
+        if ((ret != sendSz) /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
+            fprintf(stderr, "Partial write\n");
 
         if (strncmp(msg, "shutdown", 8) == 0) {
             printf("Sending shutdown command\n");
@@ -131,13 +127,12 @@ int main(int argc, char **argv)
         }
 
         /* receive a message from the server */
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) > 0) {
-                    msg[ret] = '\0';
-                    printf("Received: %s\n", msg);
-        } else {
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0) {
             print_SSL_error("failed SSL read", ssl);
             break;
         }
+        msg[ret] = '\0';
+        printf("Received: %s\n", msg);
     }
 
 /*  Cleanup and return */

@@ -1,3 +1,38 @@
+# Part2. プログミング
+
+## はじめに
+### 1) サンプルプログラム
+　これからの各章ではTLSや暗号技術、公開鍵技術にわけて典型的な処理に関するサンプルプログラムについて解説します。
+各セッションでは、サンプルプログラムの機能概要、C言語のコード、そこで利用されるAPI、また関連れする情報についてまとめます。サンプルプログラムのコードは紙面の都合でエラー処理など詳細に関しては省略した形で紹介します。エラー処理を含む実行可能なサンプルプログラムは連携サイト(...)からダウンロードすることができます。
+
+- 第6章：TLSプロトコル
+- 第7章：暗号アルゴリズム
+- 第8章：公開鍵とPKI
+
+### 2) OpenSSL/wolfSSL
+これらのサンプルソースコードは特に断りのない限り、OpenSSL, wolfSSLの両者で同様の動作をします。
+
+
+### 3) ヘッダーファイル
+本書で紹介するサンプルプログラムでは下記のヘッダーファイルをインクルードします。この中には角プログラムで共通に使われるロジックが含まれています。
+
+Examples/include/example_common.
+
+- C言語標準ライブラリーのためのヘッダーファイル
+- BSD Socketライブラリーのためのヘッダーファイル
+- TLS1.3のセッション鍵をえるためのコールバック
+　使い方は 「Part4 付録1 プログラミング環境 2) デバッグツール」を参照。
+
+### 4) ビルド方法
+  ビルド方法は「Part4 付録1 プログラミング環境 1) サンプルプログラムのビルド」を参照。
+
+
+　
+
+<br><br><br><br>
+
+<div style="page-break-before:always"></div>  
+
 ## 6.1 クライアント・サーバ通信
 
 ### 6.1.1 機能概要：
@@ -30,30 +65,24 @@ int main(int argc, char **argv)
     ライブラリの初期化 
 
     /*　SSLコンテクストの確保し、CA証明書をロード　*/
-    if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
-        { エラーメッセージ出力; goto cleanup; }
-    if ((ret = SSL_CTX_load_verify_locations
-                        (ctx, CA_CERT_FILE, NULL)) != SSL_SUCCESS)
-        { エラーメッセージ出力; goto cleanup; }
+    ctx = SSL_CTX_new(SSLv23_client_method());
+    SSL_CTX_load_verify_locations(ctx, CA_CERT_FILE, NULL);
 
     TCPソケットの確保、サーバにTCP接続
 
     /* SSLオブジェクトの生成、ソケットをアタッチ、サーバにSSL接続 */
-    if ((ssl = SSL_new(ctx)) == NULL)
-        { エラーメッセージ出力; goto cleanup; }
-    if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS)
-        { エラーメッセージ出力; goto cleanup; }
-    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS)
-        { エラーメッセージ出力; goto cleanup; }
+    ssl = SSL_new(ctx);
+    SSL_set_fd(ssl, sockfd);
+    SSL_connect(ssl);
 
     /* アプリケーション層のメッセージング　*/
     while (1) {
         送信メッセージを入力
-        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz)
-            { SSL詳細エラーメッセージ出力; break; }
+        SSL_write(ssl, msg, sendSz);
+
         "shutdown" ならばbreak
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0)
-            { SSL詳細エラーメッセージ出力; break;}
+
+        SSL_read(ssl, msg, sizeof(msg) - 1);
         受信メッセージを出力
     }
 cleanup:
@@ -79,14 +108,9 @@ int main(int argc, char **argv)
     ライブラリの初期化 
 
     /*　SSLコンテクストの確保し、サーバ証明書、プライベート鍵をロード　*/
-    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) 
-        { エラーメッセージ出力; goto cleanup; }
-    if ((ret = SSL_CTX_use_certificate_file
-        (ctx, SERVER_CERT_FILE, SSL_FILETYPE_PEM)) != SSL_SUCCESS) {
-        { エラーメッセージ出力; goto cleanup; }
-    if ((ret = SSL_CTX_use_PrivateKey_file(ctx, SERVER_KEY_FILE, 
-        SSL_FILETYPE_PEM)) != SSL_SUCCESS)
-        { エラーメッセージ出力; goto cleanup; }
+    ctx = SSL_CTX_new(SSLv23_server_method());
+    SSL_CTX_use_certificate_file(ctx, SERVER_CERT_FILE, SSL_FILETYPE_PEM);
+    SSL_CTX_use_PrivateKey_file(ctx, SERVER_KEY_FILE, SSL_FILETYPE_PEM)l
 
     TCPソケットの確保、bind, listen
 
@@ -94,23 +118,18 @@ int main(int argc, char **argv)
         connd = accept() /` TCP アクセプト */
 
         /* SSLオブジェクトの生成、ソケットをアタッチ、アクセプト */
-        if ((ssl = SSL_new(ctx)) == NULL)
-            { エラーメッセージ出力; goto cleanup; }
-        if ((ret = SSL_set_fd(ssl, connd)) != SSL_SUCCESS)
-            { エラーメッセージ出力; goto cleanup; }
-        if ((ret = SSL_accept(ssl)) != SSL_SUCCESS)
-            { エラーメッセージ出力; goto cleanup; }
+        ssl = SSL_new(ctx);
+        SSL_set_fd(ssl, connd);
+        SSL_accept(ssl);
 
         /* アプリケーション層のメッセージング　*/
         while (1) {
-            if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0)
-                { SSL詳細エラーメッセージ出力; break;}
+            SSL_read(ssl, msg, sizeof(msg) - 1);
 
             受信メッセージを出力            
             "shutdown" ならばbreak
 
-            if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz)
-                { SSL詳細エラーメッセージ出力; break; }
+            SSL_write(ssl, msg, sendSz);
         }
     }
 cleanup:
@@ -287,7 +306,6 @@ SSL_CTX_set_modeでSSL_MODE_ENABLE_PARTIAL_WRITEが指定されている場合�
 <br> <br>
 ![Fig. 6-4](./fig6-4.png)
 <br> <br>
-<div style="page-break-before:always"></div>
 
 ### 6.2.2 プログラム
  1) クライアント
@@ -308,8 +326,8 @@ int main(int argc, char **argv)
 {
 
     /*　SSLコンテクストの確保し、CA証明書をロード　*/
-    if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
-        { エラーメッセージ出力; goto cleanup; }
+    ctx = SSL_CTX_new(SSLv23_client_method());
+
 
     /* PSKコールバックの登録 */
     SSL_CTX_set_psk_client_callback(ctx, my_psk_client_cb);
@@ -322,7 +340,6 @@ cleanup:
 }
 ```
 
-<div style="page-break-before:always"></div>
 
  2) サーバ
 
@@ -341,8 +358,7 @@ static unsigned int my_psk_server_cb(SSL* ssl, const char* identity,
 int main(int argc, char **argv)
 {
     /*　SSLコンテクストの確保し、サーバ証明書、プライベート鍵をロード　*/
-    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) 
-        { エラーメッセージ出力; goto cleanup; }
+    SSL_CTX_new(SSLv23_server_method());
 
     /* PSKコールバックの登録 */
     SSL_CTX_set_psk_server_callback(ctx, my_psk_server_cb);
@@ -362,13 +378,6 @@ cleanup:
 
 #### 3) 主なAPI
 
-<br><br>
-#### 4) 処理の流れ
-#### クライアント
-
-
-<br><br>
-#### サーバ
 
 <br><br><br><br>
 
@@ -384,7 +393,7 @@ cleanup:
 
 ![Fig. 6-5](./fig6-5.png)
 <br> <br>
-<div style="page-break-before:always"></div>
+
 
 ### 6.3.2 プログラム
  1)　最初のセッション
@@ -392,26 +401,30 @@ cleanup:
 
 ```
 /* セッションを保存 +/
-static int write_SESS()
+static int write_SESS(SSL *ssl, const char* file)
 {
     session = SSL_get_SESSION(ssl);
-    i2d_SSL_SESSION(session, der);
-    fwrite(der, derLen, 1, fp);
+    sz      = i2d_SSL_SESSION(session, &buff);
+    fwrite(der, 1, sz, fp);
+    リソース解放
 }
 
 int main(int argc, char **argv)
 {
 
-    /*　SSLコンテクストの確保し、CA証明書をロード　*/
-    if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
-        { エラーメッセージ出力; goto cleanup; }
+    /*　SSLコンテクスト確保、CA証明書ロード　*/
+    ctx = SSL_CTX_new(SSLv23_client_method());
+
     ...
 
-    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS)
-    { エラーメッセージ出力; goto cleanup; }
+    SSL_connect(ssl);
 
-    /* セッション情報の取得 */
-    write_SESS(ssl);
+    whiel(1) {
+        /* メッセージ入力 */
+        SSL_write(ssl, msg, sendSz));
+
+        write_SESS(ssl);   /* セッションを保存 */
+
 
     以下、クライアントサンプルと同様
      ...
@@ -421,34 +434,34 @@ cleanup:
 }
 ```
 
-<div style="page-break-before:always"></div>
 
  2) セッション再開
 
 
 ```
 
-/* セッションの読み出し */
-static int read_SESS()
+/* セッション読み出し  */
+static int read_SESS(const char* file, SSL* ssl)
 {
-    size = fread(der, derLen, 1, fp);
-    d2i_SSL_SESSION(der, session);
-    SSL_set_SESSION(ssl, session);
+
+    sz   = ファイルサイズ; buff = malloc(sz);
+    fread(buff, 1, sz, fp);
+    p    = buff;
+    sess = d2i_SSL_SESSION(&p, sz);
+    SSL_set_SESSION(ssl, sess);
+    リソース解放
 }
 
 int main(int argc, char **argv)
 {
     /*　SSLコンテクストの確保し、サーバ証明書、プライベート鍵をロード　*/
-    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) 
-        { エラーメッセージ出力; goto cleanup; }
+    ctx = SSL_CTX_new(SSLv23_server_method());
 
-    if ((ssl = SSL_new(ctx)) == NULL)
-        { エラーメッセージ出力; goto cleanup; }
-    /* セッションの読み出し */
-    read_SESS(ssl);
+    ssl = SSL_new(ctx);
+
+    read_SESS(ssl);　/* セッション読み出し */
     ...
-    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS)
-        { エラーメッセージ出力; goto cleanup; }
+    SSL_connect(ssl);
 
     以下、クライアントサンプルと同様
 

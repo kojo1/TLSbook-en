@@ -9,9 +9,11 @@ TLS接続の際にピア認証を行います。サンプルプログラムで�
 <br> <br>
 ![Fig. 6-1](./fig6-1.png)
 <br> <br>
+<div style="page-break-before:always"></div>
 
 ### 6.1.2 プログラム
-#### 1) クライアント
+ 1) クライアント
+
 
 ```
 #include <openssl/ssl.h>
@@ -30,7 +32,8 @@ int main(int argc, char **argv)
     /*　SSLコンテクストの確保し、CA証明書をロード　*/
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
         { エラーメッセージ出力; goto cleanup; }
-    if ((ret = SSL_CTX_load_verify_locations(ctx, CA_CERT_FILE, NULL)) != SSL_SUCCESS)
+    if ((ret = SSL_CTX_load_verify_locations
+                        (ctx, CA_CERT_FILE, NULL)) != SSL_SUCCESS)
         { エラーメッセージ出力; goto cleanup; }
 
     TCPソケットの確保、サーバにTCP接続
@@ -46,10 +49,10 @@ int main(int argc, char **argv)
     /* アプリケーション層のメッセージング　*/
     while (1) {
         送信メッセージを入力
-        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz) /* メッセージ送信 */
+        if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz)
             { SSL詳細エラーメッセージ出力; break; }
         "shutdown" ならばbreak
-        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0) /* メッセージ受信 */
+        if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0)
             { SSL詳細エラーメッセージ出力; break;}
         受信メッセージを出力
     }
@@ -58,6 +61,62 @@ cleanup:
 }
 ```
 
+---
+
+ 2) サーバ
+
+
+```
+#include <openssl/ssl.h>
+#define 定数定義
+
+int main(int argc, char **argv)
+{
+    ソケット用変数, メッセージ用変数の定義
+    SSL_CTX* ctx = NULL;    /* SSLコンテクスト */
+    SSL*     ssl = NULL;    /* SSLオブジェクト */
+
+    ライブラリの初期化 
+
+    /*　SSLコンテクストの確保し、サーバ証明書、プライベート鍵をロード　*/
+    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) 
+        { エラーメッセージ出力; goto cleanup; }
+    if ((ret = SSL_CTX_use_certificate_file
+        (ctx, SERVER_CERT_FILE, SSL_FILETYPE_PEM)) != SSL_SUCCESS) {
+        { エラーメッセージ出力; goto cleanup; }
+    if ((ret = SSL_CTX_use_PrivateKey_file(ctx, SERVER_KEY_FILE, 
+        SSL_FILETYPE_PEM)) != SSL_SUCCESS)
+        { エラーメッセージ出力; goto cleanup; }
+
+    TCPソケットの確保、bind, listen
+
+    while(1) {
+        connd = accept() /` TCP アクセプト */
+
+        /* SSLオブジェクトの生成、ソケットをアタッチ、アクセプト */
+        if ((ssl = SSL_new(ctx)) == NULL)
+            { エラーメッセージ出力; goto cleanup; }
+        if ((ret = SSL_set_fd(ssl, connd)) != SSL_SUCCESS)
+            { エラーメッセージ出力; goto cleanup; }
+        if ((ret = SSL_accept(ssl)) != SSL_SUCCESS)
+            { エラーメッセージ出力; goto cleanup; }
+
+        /* アプリケーション層のメッセージング　*/
+        while (1) {
+            if ((ret = SSL_read(ssl, msg, sizeof(msg) - 1)) < 0)
+                { SSL詳細エラーメッセージ出力; break;}
+
+            受信メッセージを出力            
+            "shutdown" ならばbreak
+
+            if ((ret = SSL_write(ssl, msg, sendSz)) != sendSz)
+                { SSL詳細エラーメッセージ出力; break; }
+        }
+    }
+cleanup:
+    リソースの解放
+}
+```
 ### 6.1.3 プログラムの説明：
 
 #### 1) ヘッダーファイル
@@ -149,9 +208,13 @@ SSL_connectでTLS接続を要求します。
 #### 5) その他の注意点
 TLSのセキュリティを確保するために、SSL_write、SSL_readで通信するメッセージは以下のような対応関係が維持されます。
 
-デフォルトでは、1回のSSL_write呼び出しによるメッセージは一つのTLSレコードとして送信されます。一つのTLSレコードのメッセージは１回ないし複数回のSSL_readします。SSL_readで指定するメッセージ長は送信側と同じか長い場合は１回で受信されます。送られてきたTLSレコードのサイズのほうがSSL_readで指定したメッセージサイズより長い場合は次のSSL_readで受信されます。
+デフォルトでは、1回のSSL_write呼び出しによるメッセージは一つのTLSレコードとして送信されます。一つのTLSレコードのメッセージは１回ないし複数回のSSL_readします。SSL_readで指定するメッセージ長は送信側と同じか長い場合は１回で受信されます。送られてきたTLSレコードのサイズのほうがSSL_readで指定したメッセージサイズより長い場合には、残った分は次のSSL_readで受信されます。
 
 一方、SSL_readの指定サイズが長い場合でも、複数回のSSL_write呼び出しで送信された複数のレコードをまとめて一つのSSL_readで受信することはありません。
+
+<br> <br>
+![Fig. 6-2](./fig6-2.png)
+<br> <br>
 
 TLSレコードは最大16kバイトです。SSL_wirteで16kバイトを超えるメッセージを指定した場合は、メッセージを16kバイト X n のレコードと残り分のメッセージのレコードに分割して複数のレコードを送信します。これに対して、SSL_readは１回のAPI呼び出しに対して１レコードを読み込みます。したがって、メッセージのサイズとして最大レコードサイズ16kバイトを指定し、複数回APIを呼び出す必要があります。
 
@@ -160,7 +223,7 @@ MAX Fragmentを指定してしてTLSレコードの最大サイズに小さい�
 SSL_CTX_set_modeでSSL_MODE_ENABLE_PARTIAL_WRITEが指定されている場合は、SSL_writeは送信処理の状況によってメッセージ全体が送信できない場合、一部だけ送信しそのバイト数を返却します。
 
 <br> <br>
-![Fig. 6-2](./fig6-2.png)
+![Fig. 6-3](./fig6-3.png)
 <br> <br>
 
 ####  6.1.4 参照
@@ -210,5 +273,102 @@ SSL_CTX_set_modeでSSL_MODE_ENABLE_PARTIAL_WRITEが指定されている場合�
 
 
 表6.1.3 ピア認証関連のAPI
+<br><br><br><br>
+
+<div style="page-break-before:always"></div>
+
+# 6.2 事前共有鍵(PSK)
+
+### 6.2.1 機能概要：
+　このサンプルでは、事前共有鍵によるTLS接続を行いTLSによるメッセージ通信を行います。メッセージ通信部分はクライアント・サーバサンプルプログラムと同様です。
+
+
+
+<br> <br>
+![Fig. 6-4](./fig6-4.png)
+<br> <br>
+<div style="page-break-before:always"></div>
+
+### 6.2.2 プログラム
+ 1) クライアント
+
+
+```
+static inline unsigned int my_psk_client_cb(SSL* ssl, const char* hint,
+        char* identity, unsigned int id_max_len, unsigned char* key,
+        unsigned int key_max_len)
+{
+    strncpy(identity, 鍵のID, len);
+    key = 事前に合意した鍵;
+    return 鍵長;
+}
+
+
+int main(int argc, char **argv)
+{
+
+    /*　SSLコンテクストの確保し、CA証明書をロード　*/
+    if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
+        { エラーメッセージ出力; goto cleanup; }
+
+    /* PSKコールバックの登録 */
+    SSL_CTX_set_psk_client_callback(ctx, my_psk_client_cb);
+
+    以下、クライアントサンプルと同様
+     ...
+
+cleanup:
+    リソースの解放
+}
+```
+
+<div style="page-break-before:always"></div>
+
+ 2) サーバ
+
+
+```
+
+/* PSKコールバック */
+static unsigned int my_psk_server_cb(SSL* ssl, const char* identity,
+                           unsigned char* key, unsigned int key_max_len)
+{
+    受け取ったidentityから使用する鍵を選択
+    return 鍵長を返却;
+}
+
+
+int main(int argc, char **argv)
+{
+    /*　SSLコンテクストの確保し、サーバ証明書、プライベート鍵をロード　*/
+    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) 
+        { エラーメッセージ出力; goto cleanup; }
+
+    /* PSKコールバックの登録 */
+    SSL_CTX_set_psk_server_callback(ctx, my_psk_server_cb);
+
+    以下、サーバサンプルと同様
+
+cleanup:
+    リソースの解放
+}
+```
+### 6.2.3 プログラムの説明：
+
+#### 1) 
+<br><br><br>
+
+
+
+#### 3) 主なAPI
 
 <br><br>
+#### 4) 処理の流れ
+#### クライアント
+
+
+<br><br>
+#### サーバ
+
+
+####  6.2.4 参照

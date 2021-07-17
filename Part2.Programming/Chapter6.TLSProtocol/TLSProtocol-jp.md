@@ -370,5 +370,108 @@ cleanup:
 <br><br>
 #### サーバ
 
+<br><br><br><br>
 
-####  6.2.4 参照
+<div style="page-break-before:always"></div>
+
+# 6.3 セッション再開
+
+### 6.3.1 機能概要：
+　このサンプルでは、セッション再開によるメッセージ通信を行います。最初のセッションではサーバからセッションチケットを受け取りファイルに保存しておきます。セッション再開のクライアントでは、ファイルから保存したセッション情報を読み出し、それを使って再開します。
+
+
+<br> <br>
+
+![Fig. 6-5](./fig6-5.png)
+<br> <br>
+<div style="page-break-before:always"></div>
+
+### 6.3.2 プログラム
+ 1)　最初のセッション
+
+
+```
+/* セッションを保存 +/
+static int write_SESS()
+{
+    session = SSL_get_SESSION(ssl);
+    i2d_SSL_SESSION(session, der);
+    fwrite(der, derLen, 1, fp);
+}
+
+int main(int argc, char **argv)
+{
+
+    /*　SSLコンテクストの確保し、CA証明書をロード　*/
+    if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) 
+        { エラーメッセージ出力; goto cleanup; }
+    ...
+
+    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS)
+    { エラーメッセージ出力; goto cleanup; }
+
+    /* セッション情報の取得 */
+    write_SESS(ssl);
+
+    以下、クライアントサンプルと同様
+     ...
+
+cleanup:
+    リソースの解放
+}
+```
+
+<div style="page-break-before:always"></div>
+
+ 2) セッション再開
+
+
+```
+
+/* セッションの読み出し */
+static int read_SESS()
+{
+    size = fread(der, derLen, 1, fp);
+    d2i_SSL_SESSION(der, session);
+    SSL_set_SESSION(ssl, session);
+}
+
+int main(int argc, char **argv)
+{
+    /*　SSLコンテクストの確保し、サーバ証明書、プライベート鍵をロード　*/
+    if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) 
+        { エラーメッセージ出力; goto cleanup; }
+
+    if ((ssl = SSL_new(ctx)) == NULL)
+        { エラーメッセージ出力; goto cleanup; }
+    /* セッションの読み出し */
+    read_SESS(ssl);
+    ...
+    if ((ret = SSL_connect(ssl)) != SSL_SUCCESS)
+        { エラーメッセージ出力; goto cleanup; }
+
+    以下、クライアントサンプルと同様
+
+cleanup:
+    リソースの解放
+}
+```
+### 6.3.3 プログラムの説明：
+
+#### 最初のセッション
+<br><br>
+#### セッション再開
+<br><br><br>
+
+
+
+#### 3) 主なAPI
+
+- d2i_SSL_SESSION <br>
+- i2d_SSL_SESSION <br>
+- SSL_get_SESSION <br>
+- SSL_set_SESSION <br>
+
+<br><br>
+
+

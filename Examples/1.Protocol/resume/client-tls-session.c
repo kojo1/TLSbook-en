@@ -28,48 +28,42 @@ static void print_SSL_error(const char* msg, SSL* ssl)
     }
 }
 
-/* read a session from the file if exists */
-static int read_SESS(const char* file, SSL* ssl)
+/* Cleanup session file. */
+static void cleanup_output()
+{
+    remove(SAVED_SESS);
+}
+
+/* write a session to the file */
+static int write_SESS(SSL_SESSION* sess, const char* file)
 {
     FILE*              fp = NULL;
     unsigned char*     buff = NULL;
-    const unsigned char* p  = NULL;
     size_t             sz;
-    SSL_SESSION*       sess = NULL;
     int                ret = SSL_FAILURE;
-    
-    if (((fp = fopen(file, "rb")) == NULL) &&
-        (fseek(fp, 0, SEEK_END) != 0) &&
-        (sz = ftell(fp) == -1)) {
-        fprintf(stderr, "ERROR : failed file %s operation \n", file);
+
+    if ((fp = fopen(file, "wb")) == NULL) {
+        fprintf(stderr, "ERROR : file %s does't exists\n", file);
+        goto cleanup;
+    }
+
+    if ((sz = i2d_SSL_SESSION(sess, &buff)) <= 0){
+        print_SSL_error("i2d_SSL_SESSION", NULL);
         goto cleanup;
     }
     
-    rewind(fp);
-    if ((buff = (unsigned char*)malloc(sz)) == NULL ||
-        (fread(buff, 1, sz, fp) != sz)) {
-        fprintf(stderr, "ERROR : failed reading file\n");
+    if ((fwrite(buff, 1, sz, fp)) != sz) {
+        fprintf(stderr, "ERROR : failed fwrite\n");
         goto cleanup;
     }
-    
     printf("%s size = %ld\n", SAVED_SESS, sz);
-    
-    p = buff;
-    if((sess = d2i_SSL_SESSION(NULL, (const unsigned char**)&p, sz)) == NULL) {
-        print_SSL_error("d2i_SSL_SESSION", NULL);
-    }
-    
-    if(sess != NULL && (ret = SSL_set_session(ssl, sess) != SSL_SUCCESS)) {
-        print_SSL_error("failed SSL session", ssl);
-    } else {
-       printf("resuming session\n");
-    }
 
 cleanup:
     if (fp)
         fclose(fp);
     if (buff)
         free(buff);
+    
     return ret;
 }
 
@@ -82,6 +76,7 @@ int main(int argc, char **argv)
     char               msg[MSG_SIZE];
     size_t             sendSz;
     int                ret = SSL_FAILURE;
+    char               reused = 0;
 
     /* SSL objects */
     SSL_CTX* ctx = NULL;
@@ -147,12 +142,6 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    /* read a seesion from file */
-    if ((ret = read_SESS(SAVED_SESS, ssl)) != SSL_SUCCESS) {
-        fprintf(stderr, "ERROR: failed to read session information\n");
-        goto cleanup;
-    }
-    
     /* Attach the socket to the SSL */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
@@ -161,12 +150,14 @@ int main(int argc, char **argv)
     /* SSL connect to the server */
     if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
         print_SSL_error("failed SSL connect", ssl);
+        cleanup_output();
         goto cleanup;
     }
 
     /* check if session is resued */
     if (SSL_session_reused(ssl) == 1) {
         printf("Session is reused\n");
+        reused = 1;
     }
     else {
         printf("Session is not reused. New session was negotiated.\n");
@@ -191,12 +182,23 @@ int main(int argc, char **argv)
             fprintf(stderr, "Partial write\n");
         }
 
+        if (strncmp(msg, "shutdown", 8) == 0) {
+            printf("Sending shutdown command\n");
+            cleanup_output();
+            ret = SSL_SUCCESS;
+            break;
+        }
+
         /* 
          * closing the session, and write session information into a file
          * before writing session information, the file is removed if exists
          */  
         if (strncmp(msg, "break", 5) == 0) {
-            printf("Sending break command\n");
+            if(!reused) {
+                session = SSL_get_session(ssl);
+                cleanup_output();
+                write_SESS(session, SAVED_SESS);
+            }
             ret = SSL_SUCCESS;
             break;
         }

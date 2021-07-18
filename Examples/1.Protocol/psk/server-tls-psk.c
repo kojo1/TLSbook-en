@@ -142,7 +142,7 @@ int main(int argc, char** argv)
         while(1) {
             memset(buff, 0, sizeof(buff));
 
-            /* receive a message from the cliet */
+            /* receive a message from the client */
             if ((ret = SSL_read(ssl, buff, sizeof(buff)-1)) <= 0) {
                 print_SSL_error("failed SSL read", ssl);
                 break;

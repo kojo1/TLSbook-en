@@ -58,7 +58,6 @@ cleanup:
 }
 ```
 
-
 ### 6.1.3 プログラムの説明：
 
 #### 1) ヘッダーファイル
@@ -141,7 +140,7 @@ SSL_connectでTLS接続を要求します。
 サーバ認証要求を受ける側となるので、サーバ証明書、プライベート鍵をロードします。
 
 - TCP, TLS接続<br>
-　接続要求を受け付ける側となるので、acceptおよびSSL_acceptを呼び出します。
+　接続要求を受け付ける側となるので、listen、acceptおよびSSL_acceptを呼び出します。
 
 - アプリケーションメッセージ<br>
 　クライアント側と同様に、SSL_read, SSL_writeを呼び出しますが、送受信が逆順となります。
@@ -201,11 +200,13 @@ SSL_CTX_set_modeでSSL_MODE_ENABLE_PARTIAL_WRITEが指定されている場合�
 
 |役割|機能|指定単位|ファイルシステムあり|ファイルシステムなし|
 |:---|:---|---|:---|:---|
-|証明する側|CA証明書のロード|コンテクスト|SSL_CTX_load_verify_locations|SSL_CTX_load_verify_buffer|
-|証明される側|ノード証明書のロード|コンテクスト|SSL_CTX_use_certificate_file|SSL_CTX_use_certificate_buffer|
-|          |                 |セッション　|SSL_use_certificate_file|SSL_use_certificate_buffer|
-|          |プライベート鍵のロード|コンテクスト|SSL_CTX_use_privateKey_file|SSL_CTX_use_privateKey_buffer|
-|          |                 |セッション　|SSL_use_privateKey_file|SSL_use_privateKey_buffer|
+|認証する側|CA証明書のロード|コンテクスト|SSL_CTX_load_verify_locations|SSL_CTX_load_verify_buffer|
+||検証動作の指定|コンテクスト|SSL_CTX_set_verify|SSL_CTX_set_verify|
+||証明書チェーンの深さ指定|コンテクスト|SSL_CTX_set_verify_depth|SSL_CTX_set_verify_depth|
+|認証される側|ノード証明書のロード|コンテクスト|SSL_CTX_use_certificate_file|SSL_CTX_use_certificate_buffer|
+|||セッション　|SSL_use_certificate_file|SSL_use_certificate_buffer|
+||プライベート鍵のロード|コンテクスト|SSL_CTX_use_privateKey_file|SSL_CTX_use_privateKey_buffer|
+|||セッション　|SSL_use_privateKey_file|SSL_use_privateKey_buffer|
 
 
 表6.1.3 ピア認証関連のAPI

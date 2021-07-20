@@ -28,12 +28,6 @@ static void print_SSL_error(const char* msg, SSL* ssl)
     }
 }
 
-/* Cleanup session file. */
-static void cleanup_output()
-{
-    remove(SAVED_SESS);
-}
-
 /* write a session to the file */
 static int write_SESS(SSL_SESSION* sess, const char* file)
 {
@@ -150,17 +144,7 @@ int main(int argc, char **argv)
     /* SSL connect to the server */
     if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
         print_SSL_error("failed SSL connect", ssl);
-        cleanup_output();
         goto cleanup;
-    }
-
-    /* check if session is resued */
-    if (SSL_session_reused(ssl) == 1) {
-        printf("Session is reused\n");
-        reused = 1;
-    }
-    else {
-        printf("Session is not reused. New session was negotiated.\n");
     }
 
    /* 
@@ -184,7 +168,6 @@ int main(int argc, char **argv)
 
         if (strncmp(msg, "shutdown", 8) == 0) {
             printf("Sending shutdown command\n");
-            cleanup_output();
             ret = SSL_SUCCESS;
             break;
         }
@@ -196,7 +179,6 @@ int main(int argc, char **argv)
         if (strncmp(msg, "break", 5) == 0) {
             if(!reused) {
                 session = SSL_get_session(ssl);
-                cleanup_output();
                 write_SESS(session, SAVED_SESS);
             }
             ret = SSL_SUCCESS;

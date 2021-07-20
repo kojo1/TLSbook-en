@@ -87,9 +87,6 @@ int main(int argc, char **argv)
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
     
-    /* SSL SESSION object */
-    SSL_SESSION* session= NULL;
-    
     /* Check for proper calling convention */
     if (argc == 2) {
         ipadd = (char *)argv[1];
@@ -212,9 +209,6 @@ int main(int argc, char **argv)
 
 /*  Cleanup and return */
 cleanup:
-    if (session != NULL) {
-        SSL_SESSION_free(session);
-    }
     if (ssl != NULL) {
         SSL_shutdown(ssl);
         SSL_free(ssl);

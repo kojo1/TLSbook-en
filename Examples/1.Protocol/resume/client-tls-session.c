@@ -70,7 +70,6 @@ int main(int argc, char **argv)
     char               msg[MSG_SIZE];
     size_t             sendSz;
     int                ret = SSL_FAILURE;
-    char               reused = 0;
 
     /* SSL objects */
     SSL_CTX* ctx = NULL;
@@ -166,22 +165,13 @@ int main(int argc, char **argv)
             fprintf(stderr, "Partial write\n");
         }
 
-        if (strncmp(msg, "shutdown", 8) == 0) {
-            printf("Sending shutdown command\n");
-            ret = SSL_SUCCESS;
-            break;
-        }
-
         /* 
          * closing the session, and write session information into a file
-         * before writing session information, the file is removed if exists
+         * before writing session information
          */  
         if (strncmp(msg, "break", 5) == 0) {
-            if(!reused) {
-                session = SSL_get_session(ssl);
-                write_SESS(session, SAVED_SESS);
-            }
-            ret = SSL_SUCCESS;
+            session = SSL_get_session(ssl);
+            ret = write_SESS(session, SAVED_SESS);
             break;
         }
 

@@ -5,11 +5,11 @@ SSL = WOLFSSL
 DEBUG= no
 CTARGET_R = Client-resume-tls-
 CTARGET_S = Client-session-tls-
-STARGET   = Server-resume-tls-
+STARGET   = Server-tls-
 INSTALL_DIR = /usr/local/
 CSOURCE_R = ./client-tls-resume.c
 CSOURCE_S = ./client-tls-session.c
-SSOURCE   = ./server-tls-resume.c
+SSOURCE   = ../client-server/server-tls.c
 COBJ_R    = $(CSOURCE_R:.c=.o)
 COBJ_S    = $(CSOURCE_S:.c=.o)
 SOBJ      = $(SSOURCE:.c=.o)

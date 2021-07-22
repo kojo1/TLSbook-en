@@ -38,9 +38,9 @@ static int read_SESS(const char* file, SSL* ssl)
     SSL_SESSION*       sess = NULL;
     int                ret = SSL_FAILURE;
     
-    if (((fp = fopen(file, "rb")) == NULL) &&
-        (fseek(fp, 0, SEEK_END) != 0) &&
-        (sz = ftell(fp) == -1)) {
+    if (((fp = fopen(file, "rb")) == NULL) ||
+        (fseek(fp, 0, SEEK_END) != 0) ||
+        ((sz = ftell(fp)) == -1)) {
         fprintf(stderr, "ERROR : failed file %s operation \n", file);
         goto cleanup;
     }
@@ -63,6 +63,7 @@ static int read_SESS(const char* file, SSL* ssl)
         print_SSL_error("failed SSL session", ssl);
     } else {
        printf("resuming session\n");
+       ret = SSL_SUCCESS;
     }
 
 cleanup:
@@ -222,4 +223,3 @@ cleanup:
     printf("End of TLS Client\n");
     return ret;
 }
-

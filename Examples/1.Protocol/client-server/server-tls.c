@@ -133,8 +133,8 @@ int main(int argc, char** argv)
             printf("Received: %s\n", buff);
 
             /* Check for server shutdown command */
-            if (strncmp(buff, "shutdown", 8) == 0) {
-                printf("Received shutdown command\n");
+            if (strncmp(buff, "break", 5) == 0) {
+                printf("Received break command\n");
                 break;
             }
 

@@ -122,8 +122,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "Partial write\n");
         }
 
-        if (strncmp(msg, "shutdown", 8) == 0) {
-            printf("Sending shutdown command\n");
+        if (strncmp(msg, "break", 5) == 0) {
+            printf("Sending break command\n");
             ret = SSL_SUCCESS;
             break;
         }

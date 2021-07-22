@@ -135,13 +135,13 @@ int main(int argc, char** argv)
             printf("Received: %s\n", buff);
 
             /* Check for server shutdown command */
-            if (strncmp(buff, "shutdown", 8) == 0) {
-                printf("Received shutdown command\n");
+            if (strncmp(buff, "break", 5) == 0) {
+                printf("Received break command\n");
                 break;
             }
 
             /* send the reply to the client */
-            if ((ret = SSL_write(ssl, reply, len)) != len) {
+            if ((ret = SSL_write(ssl, reply, len)) < 0) {
                 if (ret < 0) {
                     print_SSL_error("failed SSL write", ssl);
                     ret = SSL_FAILURE;

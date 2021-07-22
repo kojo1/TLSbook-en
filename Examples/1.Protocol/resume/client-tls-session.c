@@ -9,6 +9,7 @@
 #define CA_CERT_FILE        "../../certs/tb-ca-cert.pem"
 #define LOCALHOST           "127.0.0.1"
 #define DEFAULT_PORT        11111
+#define SAVED_SESS          "session.bin"
 
 #define MSG_SIZE            256
 
@@ -16,9 +17,48 @@
 static void print_SSL_error(const char* msg, SSL* ssl)
 {
     int err;
-    err = SSL_get_error(ssl, 0);
-    fprintf(stderr, "ERROR: %s (err %d, %s)\n", msg, err,
-                    ERR_error_string(err, NULL));
+    
+    if (ssl != NULL) {
+        err = SSL_get_error(ssl, 0);
+        fprintf(stderr, "ERROR: %s (err %d, %s)\n", msg, err,
+                        ERR_error_string(err, NULL));
+    }
+    else {
+        fprintf(stderr, "ERROR: %s \n", msg);
+    }
+}
+
+/* write a session to the file */
+static int write_SESS(SSL_SESSION* sess, const char* file)
+{
+    FILE*              fp = NULL;
+    unsigned char*     buff = NULL;
+    size_t             sz;
+    int                ret = SSL_FAILURE;
+
+    if ((fp = fopen(file, "wb")) == NULL) {
+        fprintf(stderr, "ERROR : file %s does't exists\n", file);
+        goto cleanup;
+    }
+
+    if ((sz = i2d_SSL_SESSION(sess, &buff)) <= 0){
+        print_SSL_error("i2d_SSL_SESSION", NULL);
+        goto cleanup;
+    }
+    
+    if ((fwrite(buff, 1, sz, fp)) != sz) {
+        fprintf(stderr, "ERROR : failed fwrite\n");
+        goto cleanup;
+    }
+    printf("%s size = %ld\n", SAVED_SESS, sz);
+
+cleanup:
+    if (fp)
+        fclose(fp);
+    if (buff)
+        free(buff);
+    
+    return ret;
 }
 
 int main(int argc, char **argv)
@@ -34,7 +74,10 @@ int main(int argc, char **argv)
     /* SSL objects */
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
-
+    
+    /* SSL SESSION object */
+    SSL_SESSION* session= NULL;
+    
     /* Check for proper calling convention */
     if (argc == 2) {
         ipadd = (char *)argv[1];
@@ -67,7 +110,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-   /* 
+    /* 
     * Set up a TCP Socket and connect to the server 
     */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -122,9 +165,13 @@ int main(int argc, char **argv)
             fprintf(stderr, "Partial write\n");
         }
 
+        /* 
+         * closing the session, and write session information into a file
+         * before writing session information
+         */  
         if (strncmp(msg, "break", 5) == 0) {
-            printf("Sending break command\n");
-            ret = SSL_SUCCESS;
+            session = SSL_get_session(ssl);
+            ret = write_SESS(session, SAVED_SESS);
             break;
         }
 
@@ -139,6 +186,9 @@ int main(int argc, char **argv)
 
 /*  Cleanup and return */
 cleanup:
+    if (session != NULL) {
+        SSL_SESSION_free(session);
+    }
     if (ssl != NULL) {
         SSL_shutdown(ssl);
         SSL_free(ssl);

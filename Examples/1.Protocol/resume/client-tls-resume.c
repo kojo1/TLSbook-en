@@ -9,6 +9,7 @@
 #define CA_CERT_FILE        "../../certs/tb-ca-cert.pem"
 #define LOCALHOST           "127.0.0.1"
 #define DEFAULT_PORT        11111
+#define SAVED_SESS          "session.bin"
 
 #define MSG_SIZE            256
 
@@ -16,9 +17,61 @@
 static void print_SSL_error(const char* msg, SSL* ssl)
 {
     int err;
-    err = SSL_get_error(ssl, 0);
-    fprintf(stderr, "ERROR: %s (err %d, %s)\n", msg, err,
-                    ERR_error_string(err, NULL));
+    
+    if (ssl != NULL) {
+        err = SSL_get_error(ssl, 0);
+        fprintf(stderr, "ERROR: %s (err %d, %s)\n", msg, err,
+                        ERR_error_string(err, NULL));
+    }
+    else {
+        fprintf(stderr, "ERROR: %s \n", msg);
+    }
+}
+
+/* read a session from the file if exists */
+static int read_SESS(const char* file, SSL* ssl)
+{
+    FILE*              fp = NULL;
+    unsigned char*     buff = NULL;
+    const unsigned char* p  = NULL;
+    size_t             sz;
+    SSL_SESSION*       sess = NULL;
+    int                ret = SSL_FAILURE;
+    
+    if (((fp = fopen(file, "rb")) == NULL) ||
+        (fseek(fp, 0, SEEK_END) != 0) ||
+        ((sz = ftell(fp)) == -1)) {
+        fprintf(stderr, "ERROR : failed file %s operation \n", file);
+        goto cleanup;
+    }
+    
+    rewind(fp);
+    if ((buff = (unsigned char*)malloc(sz)) == NULL ||
+        (fread(buff, 1, sz, fp) != sz)) {
+        fprintf(stderr, "ERROR : failed reading file\n");
+        goto cleanup;
+    }
+    
+    printf("%s size = %ld\n", SAVED_SESS, sz);
+    
+    p = buff;
+    if((sess = d2i_SSL_SESSION(NULL, (const unsigned char**)&p, sz)) == NULL) {
+        print_SSL_error("d2i_SSL_SESSION", NULL);
+    }
+    
+    if(sess != NULL && (ret = SSL_set_session(ssl, sess) != SSL_SUCCESS)) {
+        print_SSL_error("failed SSL session", ssl);
+    } else {
+       printf("resuming session\n");
+       ret = SSL_SUCCESS;
+    }
+
+cleanup:
+    if (fp)
+        fclose(fp);
+    if (buff)
+        free(buff);
+    return ret;
 }
 
 int main(int argc, char **argv)
@@ -34,7 +87,7 @@ int main(int argc, char **argv)
     /* SSL objects */
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
-
+    
     /* Check for proper calling convention */
     if (argc == 2) {
         ipadd = (char *)argv[1];
@@ -67,7 +120,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-   /* 
+    /* 
     * Set up a TCP Socket and connect to the server 
     */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -92,6 +145,12 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
+    /* read a seesion from file */
+    if ((ret = read_SESS(SAVED_SESS, ssl)) != SSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to read session information\n");
+        goto cleanup;
+    }
+    
     /* Attach the socket to the SSL */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
@@ -101,6 +160,14 @@ int main(int argc, char **argv)
     if ((ret = SSL_connect(ssl)) != SSL_SUCCESS) {
         print_SSL_error("failed SSL connect", ssl);
         goto cleanup;
+    }
+
+    /* check if session is resued */
+    if (SSL_session_reused(ssl) == 1) {
+        printf("Session is reused\n");
+    }
+    else {
+        printf("Session is not reused. New session was negotiated.\n");
     }
 
    /* 
@@ -122,6 +189,10 @@ int main(int argc, char **argv)
             fprintf(stderr, "Partial write\n");
         }
 
+        /* 
+         * closing the session, and write session information into a file
+         * before writing session information, the file is removed if exists
+         */  
         if (strncmp(msg, "break", 5) == 0) {
             printf("Sending break command\n");
             ret = SSL_SUCCESS;
@@ -152,4 +223,3 @@ cleanup:
     printf("End of TLS Client\n");
     return ret;
 }
-

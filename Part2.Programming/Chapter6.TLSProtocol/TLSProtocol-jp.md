@@ -473,20 +473,46 @@ cleanup:
 ```
 ### 6.3.3 プログラムの説明：
 
-#### 最初のセッション
-<br><br>
 
-#### セッション再開
-<br><br><br>
+##### 1) ヘッダーファイル
+　#include "openssl/ssl.h": TLSプログラムで使用するAPI、データタイプなどの定義が含まれています
 
+##### 2) 管理構造体とポインタ
+- SSL_CTX *ctx;<br>
+   一連のTLS接続処理(コンテクスト)を管理するための構造体です。同じサーバへのTLS接続のような類似の条件での複数のTLS接続を一つのコンテクストとして管理します。
 
+- SSL *ssl;<br>
+　１つのTLS接続を管理するための構造体です。
 
-#### 3) 主なAPI
+- 構造体の確保と解放<br>
+    - 確保：SSL_CTX_new(), SSL_new()
+    - 解放：SS*_CTX_free(), SSL_free()
 
+- SSL_SESSION*;<br>
+  1つのTLSセッションを管理するための構造体です。
+
+- 構造体の確保、設定と解放<br>
+    - 確保：SSL_get_SESSION()
+    - 設定：SSL_set_SESSION()
+    - 解放：SSL_SESSION_free()
+
+##### 3) 主なAPI
 - d2i_SSL_SESSION <br>
+d2i_SSL_SESSION（）は、バイナリ保存されたTLSセッションのデータをSSL_SESSION構造体へ再構成し返却します。
+
 - i2d_SSL_SESSION <br>
+i2d_SSL_SESSION（）は、SSL_SESSION構造体のデータを、バイナリーデータとして返却します。関数の戻り値はバイナリデータの長さが返されます。 
+
 - SSL_get_SESSION <br>
+SSL_get_session（）は、sslで使用されているSSL_SESSIONへのポインターを返します。 
+
 - SSL_set_SESSION <br>
+SSL_set_session（）は、TLS接続を確立するときに使用するセッションを設定します。
+
+
+#### 4) 処理の流れ
+#### 最初のセッション
+#### セッション再開
 
 <br><br>
 

@@ -62,7 +62,7 @@ static int read_SESS(const char* file, SSL* ssl)
     if(sess != NULL && (ret = SSL_set_session(ssl, sess) != SSL_SUCCESS)) {
         print_SSL_error("failed SSL session", ssl);
     } else {
-       printf("resuming session\n");
+       printf("Resuming session\n");
        ret = SSL_SUCCESS;
     }
 
@@ -81,7 +81,6 @@ int main(int argc, char **argv)
     char                *ipadd = NULL;
 
     char               msg[MSG_SIZE];
-    size_t             sendSz;
     int                ret = SSL_FAILURE;
 
     /* SSL objects */
@@ -92,22 +91,18 @@ int main(int argc, char **argv)
     if (argc == 2) {
         ipadd = (char *)argv[1];
     } else if (argc == 1) {
-        printf("Send to localhost(%s)\n", LOCALHOST);
+        fprintf(stderr, "Send to localhost(%s)\n", LOCALHOST);
         ipadd = LOCALHOST;
     } else {
-        printf("ERROR: Too many arguments.\n");
+        fprintf(stderr, "ERROR: Too many arguments.\n");
         goto cleanup;
     }
 
     /* Initialize library */
     if (SSL_library_init() != SSL_SUCCESS) {
-        printf("ERROR: failed to initialize the library\n");
+        fprintf(stderr, "ERROR: failed to initialize the library\n");
         goto cleanup;
     }
-
-#if defined(DEBUG_WOLFSSL)
-    wolfSSL_Debugging_ON(); /* Debug log when Debug Mode is enabled */
-#endif
     
     /* Create and initialize an SSL context object*/
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) {
@@ -177,23 +172,22 @@ int main(int argc, char **argv)
         printf("Message to send: ");
         if(fgets(msg, sizeof(msg), stdin) <= 0)
             break;
-        sendSz = strnlen(msg, sizeof(msg));
 
         /* send a message to the server */
-        if ((ret = SSL_write(ssl, msg, sendSz)) < 0) {
+        if ((ret = SSL_write(ssl, msg, strnlen(msg, sizeof(msg)))) < 0) {
             print_SSL_error("failed SSL write", ssl);
             break;
         }
         /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
-        if (ret != sendSz) {
-            fprintf(stderr, "Partial write\n");
+        if (ret != strnlen(msg, sizeof(msg))) {
+            printf("Partial write\n");
         }
 
         /* 
          * closing the session, and write session information into a file
          * before writing session information, the file is removed if exists
          */  
-        if (strncmp(msg, "break", 5) == 0) {
+        if (strcmp(msg, "break\n") == 0) {
             printf("Sending break command\n");
             ret = SSL_SUCCESS;
             break;

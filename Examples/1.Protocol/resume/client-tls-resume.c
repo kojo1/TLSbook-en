@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     /* SSL objects */
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
-    
+
     /* Check for proper calling convention */
     if (argc == 2) {
         ipadd = (char *)argv[1];
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    /* 
+   /* 
     * Set up a TCP Socket and connect to the server 
     */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -217,3 +217,4 @@ cleanup:
     printf("End of TLS Client\n");
     return ret;
 }
+

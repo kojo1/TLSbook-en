@@ -56,5 +56,8 @@ int mem_recv(SSL *ssl, char *buff, int sz, void *ctx)
     if(ch->used == 0)
         ch->head = 0;
 
+    if(copySz == 0)
+        sleep(1);
+
     return copySz == 0 ? WANT_READ : copySz;
 }

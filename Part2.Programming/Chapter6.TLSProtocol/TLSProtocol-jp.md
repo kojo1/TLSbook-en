@@ -488,15 +488,15 @@ cleanup:
     - SSL構造体で管理されている接続情報のうち、セッションチケットなどセッション再開で必要とされる情報一式を抽出し管理する構造体です。
 
 - 構造体の確保、設定と解放<br>
-    - 確保：SSL_get_SESSION()
-　　　　SSL構造体の接続情報からセッション再開に必要なデータ一式をSSL_SESSION構造体の形で抽出します。そのときSSL_SESSION構造体に必要な領域を確保し、そのポインタを返却します。SSL_get_SESSIONはクライアントがSSL_connectを実行後、TLSの安全な接続が確保されている間に呼び出します。
-    - 設定：SSL_set_SESSION()
-　　　　SSL_get_SESSIONで取り出したSSL_SESSION構造体をセッション再開のためにSSL構造体に設定します。SSL_set_SESSIONはクライアントでSSL_connectを行う前に呼び出します。
-    - 解放：SSL_SESSION_free()
-　　　　SSL_SESSION構造体のポインタを解放します。
+    - 確保：SSL_get_SESSION()<br>
+        SSL構造体の接続情報からセッション再開に必要なデータ一式をSSL_SESSION構造体の形で抽出します。そのときSSL_SESSION構造体に必要な領域を確保し、そのポインタを返却します。SSL_get_SESSIONはクライアントがSSL_connectを実行後、TLSの安全な接続が確保されている間に呼び出します。
+    - 設定：SSL_set_SESSION()<br>
+        SSL_get_SESSIONで取り出したSSL_SESSION構造体をセッション再開のためにSSL構造体に設定します。SSL_set_SESSIONはクライアントでSSL_connectを行う前に呼び出します。
+    - 解放：SSL_SESSION_free()<br>
+        SSL_SESSION構造体のポインタを解放します。
 　　　　
-- 構造体のデータ変換
-　　- ANS1形式から内部形式へ : d2i_SSL_SESSION<br>
+- 構造体のデータ変換<br>
+    - ANS1形式から内部形式へ : d2i_SSL_SESSION<br>
         d2i_SSL_SESSIONは、ASN1形式で保存されたSSL_SESSION構造体のデータを内部形式のSSL_SESSION構造体へ再構築し、そのポインタを返却します。
 
     - 内部形式からASN1形式へ : i2d_SSL_SESSION<br>
@@ -504,12 +504,9 @@ cleanup:
 
 #### 3) 処理の流れ
 ##### 最初のセッション
-TLSメッセージを送信後、送信コマンドが"break"の場合は、セッション再開で利用するためのセッション管理情報をファイルに保存します。
-セッション管理情報はSSL_get_SESSIONでSSL_SESSION構造体で抽出し、i2d_SSL_SESSIONでASN1形式へ変換後ファイルへ書き込みます。
-
+TLSメッセージを送信後、送信コマンドが"break"の場合は、セッション再開で利用するためのセッション管理情報をファイルに保存します。セッション管理情報はSSL_get_SESSIONでSSL_SESSION構造体で抽出し、i2d_SSL_SESSIONでASN1形式へ変換後ファイルへ書き込みます。
 ##### セッション再開
-ファイルに保存されたセッション管理情報を読み込みTLS接続時にセッションを再開できるようにSSL構造体に設定します。
-d2i_SSL_SESSIONでASN1形式から内部形式に変換します。変換したSSL_SESSION構造体をSSL_set_sessionでSSL構造体に設定します。
+ファイルに保存されたセッション管理情報を読み込みTLS接続時にセッションを再開できるようにSSL構造体に設定します。d2i_SSL_SESSIONでASN1形式から内部形式に変換します。変換したSSL_SESSION構造体をSSL_set_sessionでSSL構造体に設定します。
 <br><br>
 
 

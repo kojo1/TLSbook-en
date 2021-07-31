@@ -220,6 +220,7 @@ int main(int argc, char **argv)
 
     stat_init(&stat);
 
+    /* Supper Loop */
     while(1)
         client_main(&stat);
     

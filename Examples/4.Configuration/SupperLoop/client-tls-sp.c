@@ -31,10 +31,10 @@ enum
     CLIENT_END
 };
 
-static int client_stat = CLIENT_BEGIN;
 #define FALLTHROUGH
 
 typedef struct {
+    int stat;
     int sockfd;
     char ipadd[32];
     SSL_CTX *ctx;
@@ -43,6 +43,7 @@ typedef struct {
 
 void stat_init(STAT_client *stat)
 {
+    stat->stat = CLIENT_BEGIN;
     stat->sockfd = -1;
     stat->ctx    = NULL;
     stat->ssl    = NULL;
@@ -56,7 +57,7 @@ void client_main(STAT_client *stat)
     static char    msg[MSG_SIZE];
     int     ret = SSL_FAILURE;
   
-    switch(client_stat) {
+    switch(stat->stat) {
     case CLIENT_BEGIN:
 
         /* Initialize library */
@@ -92,7 +93,7 @@ void client_main(STAT_client *stat)
             goto cleanup;
         }
 
-        client_stat = CLIENT_TCP_CONNECT;
+        stat->stat = CLIENT_TCP_CONNECT;
         FALLTHROUGH;
     case CLIENT_TCP_CONNECT:
 
@@ -115,7 +116,7 @@ void client_main(STAT_client *stat)
             goto cleanup;
         }
 
-        client_stat = CLIENT_SSL_CONNECT;
+        stat->stat = CLIENT_SSL_CONNECT;
         FALLTHROUGH;
     case CLIENT_SSL_CONNECT:
 
@@ -141,7 +142,7 @@ void client_main(STAT_client *stat)
                 break;
 
             /* send a message to the server */
-            client_stat = CLIENT_SSL_WRITE;
+            stat->stat = CLIENT_SSL_WRITE;
             FALLTHROUGH;
     case CLIENT_SSL_WRITE:
 
@@ -165,7 +166,7 @@ void client_main(STAT_client *stat)
             goto cleanup;
         }
 
-        client_stat = CLIENT_SSL_READ;
+        stat->stat = CLIENT_SSL_READ;
         FALLTHROUGH;
     case CLIENT_SSL_READ:
 
@@ -188,7 +189,7 @@ void client_main(STAT_client *stat)
 /*  Cleanup and return */
 cleanup:
 
-    client_stat = CLIENT_END;
+    stat->stat = CLIENT_END;
 
     if (stat->ssl != NULL) {
         SSL_shutdown(stat->ssl);
@@ -199,7 +200,7 @@ cleanup:
     if (ret != SSL_SUCCESS)
         ret = SSL_FAILURE;
     printf("End of TLS Client\n");
-    client_stat = CLIENT_BEGIN;
+    stat->stat = CLIENT_BEGIN;
 }
 
 int main(int argc, char **argv)

@@ -4,9 +4,12 @@ CC = gcc
 SSL = WOLFSSL
 DEBUG= 
 
-TARGET   = client
 INSTALL_DIR = /usr/local/
-SOURCE   = ./client-tls-baremetal.c
+
+CLIENT   = client
+SERVER   = server
+CLIENT_SOURCE   = ./client-tls-sp.c
+SERVER_SOURCE   = ./server-tls-sp.c
 
 ifeq ($(SSL),OPENSSL)
 INCLUDE   = -I../../include -I.
@@ -18,10 +21,13 @@ LDFLAGS   = -lwolfssl
 CFLAGS    = -g -Wall $(INCLUDE)
 endif
 
-all: $(TARGET)
+all: $(CLEINT) $(SERVER)
 
-$(TARGET): $(SOURCE)
-	$(CC) $(CFLAGS) -o $(TARGET) $(LDFLAGS) $(SOURCE)
+$(CLIENT): $(CLIENT_SOURCE)
+	$(CC) $(CFLAGS) -o $(CLIENT) $(CLIENT_SOURCE) $(LDFLAGS)
+
+$(SERVER): $(SERVER_SOURCE)
+	$(CC) $(CFLAGS) -o $(SERVER) $(SERVER_SOURCE) $(LDFLAGS)
 
 clean: FORCE
 	-rm -f *.o $(TARGET)

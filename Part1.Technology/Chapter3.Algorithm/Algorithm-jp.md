@@ -632,7 +632,7 @@ PKCS (Public-Key Cryptography Standards) はRSAセキュリティ社により公
 
 |PKCS#|RFC|内容|
 |:--:|:--:|:--|
-|#1|3447|  RSA暗号スキーム|
+|#1|8017|  RSA暗号スキーム|
 |#2| - | PKCS #1へ統合され廃止|
 |#3| - | Diffie-Hellman鍵共有 |
 |#4| - | PKCS #1へ統合され廃止|

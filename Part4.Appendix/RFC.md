@@ -26,24 +26,20 @@
 ||7301|"Transport Layer Security (TLS) Application-Layer Protocol Negotiation Extension"|
 ||6960|status_request|
 ||8422,7919|supported_groups|
-||5764|use_srtp|SRTPプロファイルのリスト|
-||6520|heartbeat|ハートビートの送信モードの提示|
+||5764|use_srtp|
+||6520|heartbeat|
 ||7301|application_layer_protocol_negotiation|
 ||6962|signed_certificate_timestamp|
 ||7250|client_certificate_type|
-|セッション再開||||
-||5077|"Transport Layer Security (TLS) Session Resumption without Server-Side State"|
-|鍵合意||||
-||6091|"Using OpenPGP Keys for Transport Layer Security (TLS) Authentication"|
-||7250|"Using Raw Public Keys in TLS/DTLS"|
-||7919|"Negotiated Finite Field Diffie-Hellman Ephemeral Parameters for Transport Layer Security"|
-|鍵導出||||
-||5705|"Keying Material Exporters for Transport Layer Security (TLS)"|
-||5869|"HMAC-based Extract-and-Expand Key Derivation Function (HKDF)"|
+|OCSP||||
+||6960|X.509 Internet Public Key Infrastructure Online Certificate Status Protocol|
+||6961|"The Transport Layer Security(TLS) Multiple Certificate Status Request Extension"|
+||6962|"Certificate Transparency"|
 |乱数||||
 ||4086|"Randomness Requirements for Security"|
-|メッセージ認証コード||||
-||2104|"HMAC: Keyed-Hashing for Message Authentication"|
+|ハッシュ||||
+||3174|US Secure Hash Algorithm 1 (SHA1)|
+||6234|US Secure Hash Algorithms(SHA and SHA-based HMAC and HKDF)|
 |対称鍵暗号||||
 ||5246|3DES_EDE|| 
 ||5932|Camellia|
@@ -54,25 +50,23 @@
 ||7465|"Prohibiting RC4 Cipher Suites"|
 ||8439|"ChaCha20 and Poly1305 for IETF  Protocols"|
 ||5116|"An Interface and Algorithms for Authenticated Encryption"|
+|鍵導出||||
+||5705|"Keying Material Exporters for Transport Layer Security (TLS)"|
+||5869|"HMAC-based Extract-and-Expand Key Derivation Function (HKDF)"|
+||8018|  パスワードベース鍵導出 (PBKDF2)|
 |RSA||||
 ||8017|"PKCS #1: RSA Cryptography Specifications Version 2.2"|
 ||5756|"Updates for RSAES-OAEP and RSASSA-PSS Algorithm Parameters"|
 |楕円曲線||||
-||4492|"Elliptic Curve Cryptography (ECC) Cipher Suites for Transport Layer Security (TLS)"|
 ||7748|"Elliptic Curves for Security"|
 ||8422|"Elliptic Security (TLS) Versions 1.2 and Earlier"|
+|鍵合意||||
+||7250|"Using Raw Public Keys in TLS/DTLS"|
+||79z19|"Negotiated Finite Field Diffie-Hellman Ephemeral Parameters for Transport Layer Security"|
 |署名||||
 ||6979|"Deterministic Usage of the Digital Signature Algorithm (DSA) and<br> Elliptic Curve Digital Signature Algorithm (ECDSA)"|
 ||8032|"Edwards-Curve Digital Signature Algorithm (EdDSA)"|
-|TransportLayer||||||
-||5929|"Channel Bindings for TLS"|
-||7230|"HTTP/1.1 Message Syntax and Routing"|
-||8305|"Happy Eyeballs Version 2:Better Connectivity Using Concurrency"|
 |証明書||||
 ||5280|"Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile"|
-||6960|X.509 Internet Public Key Infrastructure Online Certificate Status Protocol|
-||6961|"The Transport Layer Security(TLS) Multiple Certificate Status Request Extension"|
-||6962|"Certificate Transparency"|
-|脅威||||
-||7507|"TLS Fallback Signaling Cipher Attacks"|
+
 

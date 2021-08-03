@@ -1,5 +1,5 @@
 /* 
- * psk-server.c
+ * server-tls-psk.c
  */
 #include "example_common.h"
 
@@ -58,15 +58,12 @@ int main(int argc, char** argv)
     int                connd = -1;
     
     char               buff[MSG_SIZE];
-    int                len;
-    const char         *reply = "I hear ya fa shizzle!";
-    int                ret;
+    const char         reply[] = "I hear ya fa shizzle!";
+    int                ret = SSL_FAILURE;
 
     /* Declare SSL objects */
     SSL_CTX* ctx = NULL;
     SSL*     ssl = NULL;
-
-    len = strlen(reply);
 
     /* Initialize library */
     if (SSL_library_init() != SSL_SUCCESS) {
@@ -140,7 +137,6 @@ int main(int argc, char** argv)
         * Application messaging
         */
         while(1) {
-            memset(buff, 0, sizeof(buff));
 
             /* receive a message from the client */
             if ((ret = SSL_read(ssl, buff, sizeof(buff)-1)) <= 0) {
@@ -151,23 +147,22 @@ int main(int argc, char** argv)
             printf("Received: %s\n", buff);
 
             /* Check for server shutdown command */
-            if (strncmp(buff, "shutdown", 8) == 0) {
-                printf("Received shutdown command\n");
+            if (strcmp(buff, "break\n") == 0) {
+                printf("Received break command\n");
                 break;
             }
 
             /* send the reply to the client */
-            if ((ret = SSL_write(ssl, reply, len)) < 0) {
+            if ((ret = SSL_write(ssl, reply, sizeof(reply))) < 0) {
                 if (ret < 0) {
                     print_SSL_error("failed SSL write", ssl);
                     ret = SSL_FAILURE;
                     break;
                 }
-                fprintf(stderr, "%d bytes of %d bytes were sent\n", ret, len);
             }
              /* only for SSL_MODE_ENABLE_PARTIAL_WRITE mode */
-            if (ret != len) {
-                fprintf(stderr, "Partial write\n");
+            if (ret != sizeof(reply)) {
+                printf("Partial write\n");
             }
         }
 

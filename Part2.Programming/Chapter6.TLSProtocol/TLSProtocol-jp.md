@@ -372,16 +372,23 @@ cleanup:
 ```
 ### 6.2.3 プログラムの説明：
 
-#### 1) 
-<br><br><br>
+#### 1) ヘッダーファイル
+　#include "openssl/ssl.h": TLSプログラムで使用するAPI、データタイプなどの定義が含まれています
+
+#### 2) 主な管理構造体とAPI
+- SSL_CTX *ctx、SSL *ssl<br>
+6.1 クライアント・サーバ通信を参照
+
+- 構造体の確保と解放<br>
+6.1 クライアント・サーバ通信を参照
+
+- コールバック関数の登録
+  クライアント側 : SSL_CTX_set_psk_client_callback<br>
+      第2引数でクライアント側のコールバック関数を登録します。コールバック関数はSSL_connect呼び出し時に、事前鍵及びIDの取得のために呼び出されます。事前鍵はクライアント側に保持され、IDのみサーバ側に送られます。
+  サーバ側: SSL_CTX_set_psk_server_callback<br>
+      第2引数でサーバ側のコールバック関数を登録します。コールバック関数はSSL_accept呼び出し時処理中に呼び出されます。引数にクライアントから受け取ったIDが渡されるので、コールバック処理はIDに対応する事前鍵を返却します。
 
 
-
-#### 3) 主なAPI
-- SSL_CTX_set_psk_client_callback
-- SSL_CTX_set_psk_server_callback
-
-<br><br><br><br>
 
 <div style="page-break-before:always"></div>
 

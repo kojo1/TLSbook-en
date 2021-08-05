@@ -50,7 +50,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: failed to initialize the library\n");
         goto cleanup;
     }
-    
+   
     /* Create and initialize an SSL context object*/
     if ((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL) {
         fprintf(stderr, "ERROR: failed to create an SSL context object\n");

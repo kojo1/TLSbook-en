@@ -43,10 +43,6 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
-#if defined(DEBUG_WOLFSSL)
-    wolfSSL_Debugging_ON(); /* Debug log when Debug Mode is enabled */
-#endif
-
     /* Create and initialize an SSL context object */
     if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL) {
         fprintf(stderr, "ERROR: failed to create an SSL context object\n");

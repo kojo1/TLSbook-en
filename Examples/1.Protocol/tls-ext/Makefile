@@ -3,12 +3,12 @@ CC = gcc
 #SSL = OPENSSL
 SSL = WOLFSSL
 DEBUG= no
-CTARGET   = Client-tls-
+CTARGET_CP   = Client-tls-ext-cipher-
 STARGET   = Server-tls-
 INSTALL_DIR = /usr/local/
-CSOURCE   = ./client-tls.c
-SSOURCE   = ./server-tls.c
-COBJ      = $(CSOURCE:.c=.o)
+CSOURCE_CP  = ./client-tls-ext-cipher.c
+SSOURCE   = ../client-server/server-tls.c
+COBJ_CP   = $(CSOURCE_CP:.c=.o)
 SOBJ      = $(SSOURCE:.c=.o)
 
 ifeq ($(SSL),OPENSSL)
@@ -21,17 +21,17 @@ LDFLAGS   = -lwolfssl
 CFLAGS    = -g -Wall $(INCLUDE)
 endif
 
-all: $(STARGET)$(SSL) $(CTARGET)$(SSL)
+all: $(STARGET)$(SSL) $(CTARGET_CP)$(SSL)
 
 $(STARGET)$(SSL): $(SOBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-$(CTARGET)$(SSL): $(COBJ)
+$(CTARGET_CP)$(SSL): $(COBJ_CP)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean: FORCE
-	-rm -f *.o
-	-rm -f $(STARGET)* $(CTARGET)*
+	-rm -f ../client-server/*.o *.o
+	-rm -f ../client-server/$(STARGET)* $(CTARGET_CP)*
 
 FORCE:
 .PHONY: FORCE

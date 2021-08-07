@@ -428,7 +428,7 @@ int main(int argc, char **argv)
 
     SSL_connect(ssl);
 
-    whiel(1) {
+    while(1) {
         /* メッセージ入力 */
         SSL_write(ssl, msg, sendSz));
 
@@ -500,7 +500,7 @@ cleanup:
     - 設定：SSL_set_SESSION()<br>
         SSL_get_SESSIONで取り出したSSL_SESSION構造体をセッション再開のためにSSL構造体に設定します。SSL_set_SESSIONはクライアントでSSL_connectを行う前に呼び出します。
     - 解放：SSL_SESSION_free()<br>
-        SSL_SESSION構造体のポインタを解放します。
+        SSL_SESSION構造体を解放します。
 　　　　
 - 構造体のデータ変換<br>
     - ANS1形式から内部形式へ : d2i_SSL_SESSION<br>

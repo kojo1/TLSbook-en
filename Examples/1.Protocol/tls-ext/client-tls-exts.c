@@ -74,6 +74,12 @@ int main(int argc, char **argv)
         fprintf(stderr,"ERROR: failed to set cipher list\n");
         goto cleanup;
     }
+
+    /* Set supported_group/elliptic_curves extension */
+    if ((ret =SSL_CTX_set1_groups_list(ctx, "P-521:P-384:P-256")) != SSL_SUCCESS) {
+        fprintf(stderr,"ERROR: failed to set cipher list\n");
+        goto cleanup;
+    }
    /* 
     * Set up a TCP Socket and connect to the server 
     */

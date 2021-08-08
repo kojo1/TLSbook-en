@@ -60,6 +60,13 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
+    if (fseek(infp, 0, SEEK_END) != 0 ||
+        (sz = ftell(infp)) < 0) {
+        fprintf(stderr, "ERROR: Input file size\n");
+        goto cleanup;
+    }
+    rewind(infp);
+
     i = 2;
     if(argc > 2 && argv[2][0] != '-') {
         if((outfp = fopen(argv[2], "w+")) == NULL) {
@@ -105,7 +112,7 @@ int main(int argc, char **argv)
         }
     }
 
-    cipher_main(mode, infp, outfp, key, key_sz, iv, iv_sz, tag, tag_sz);
+    cipher_main(mode, infp, sz, outfp, key, key_sz, iv, iv_sz, tag, tag_sz);
 
 cleanup:
     if(infp != NULL)

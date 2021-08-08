@@ -25,12 +25,16 @@ cipher_main関数はアルゴリズムサンプルごとの個別の関数です
 cipher_main関数は、cipher_main.h内で以下のように定義されています。cipher_main.c内のmain関数はアーギュメントの解析内容をcipher_main関数のアーギュメントに引き継ぎます。
 
 ```
-void cipher_main(int mode, FILE *infp, FILE *outfp,
+void cipher_main(int mode, FILE *infp, int sz, FILE *outfp,
                  unsigned char *key, int key_sz, 
                  unsigned char *iv,  int iv_sz,
                  unsigned char *tag, int tag_sz
                 );
 ```
+
+### バッファーサイズ
+サンプルで使用している暗号処理APIはメモリーサイズの許す限り大きなバッファで一度に処理することができまが、小さな処理単位を繰り返して大きなサイズのデータを処理する例を示すためめにあえてバッファサイズを制限しています。各アルゴリズムのソースコードの先頭付近にある「#define BUFF_SIZE」の定義は適当に変更することができます。
+
 
 # 7.1 ランダム
     RAND_bytes();
@@ -66,26 +70,8 @@ OpenSSL/wolfSSLでは、共通鍵暗号の処理のために"EVP"で始まる一
 
 最後に終了後管理ブロックを解放します。
 
-## 2) EVP関数の命名規則
 
-EVP関数では、共通鍵の暗号または復号処理の方向がプログラミング時に静的に決定している場合のための関数と実行時に動的に決めることができる関数の二つの系列の関数が用意されています。静的な場合は関数名に"Encrypt"または"Decrypt"の命名が含まれていて、処理の方向を表します。動的な場合は関数名には"Cipher"の命名がされ、EVP_CipherInitの初期設定時に処理の方向を指定します。次の表に、これらの共通鍵処理のための関数名をまとめます。
-
-|機能|暗号化|復号|動的指定|
-|---|---|---|---|
-|コンテクスト確保|EVP_CIPHER_CTX_new|EVP_CIPHER_CTX_new|EVP_CIPHER_CTX_new|
-|初期設定|EVP_EncryptInit|EVP_DecryptInit|EVP_CipherInit|
-|暗号/復号|EVP_EncryptUpdate|EVP_DecryptUpdate|EVP_CipherUpdate|
-|終了処理|EVP_EncryptFinal|EVP_DecryptFinal|EVP_CipherFinal|
-|コンテクスト解放|EVP_CIPHER_CTX_free|EVP_CIPHER_CTX_free|EVP_CIPHER_CTX_free|
-
-
-## 3) パディング処理
-EVP関数では、ブロック型暗号のためのパディング処理を自動的に行います。パディングスキームはPKCSです。このため、暗号化処理の場合は処理結果は入力データのサイズに比べてブロックサイズの整数倍にアラインされる分だけ大きくなる点に注意が必要です。入力データがブロックサイズの整数倍の場合にもパディング用に１ブロック分の出力データが付加されます。一方、復号化の際はパディングの内容が解消され、復号化された本来の出力データのみとなります。パディングを含んだ暗号、復号処理の出力データサイズは"Final"関数のアーギュメントに返却されます。
-
-パディングスキームにはPKCS#7に規定されるスキームが使用されます　(3.4 共通鍵暗号 4)パディングスキーム参照)。
-
-
-## 4) サンプルプログラム
+## 2) サンプルプログラム
 
 以下に動的モードの場合にEVP関数を使用して共通鍵暗号処理を実現するサンプルプログラムを示します。"CIPHER" 定数の定義を変更することで各種の暗号アルゴリズム、利用モードを処理することができます。（指定できる暗号スイートについては"6) 暗号アルゴリズム、利用モード"を参照）
 
@@ -121,7 +107,7 @@ EVP関数では、ブロック型暗号のためのパディング処理を自�
 ```         
 <br><br><br>
 
-## 5) 認証付き暗号(AEAD)
+## 3) 認証付き暗号(AEAD)
 
 AES-GCMなど認証付き暗号の場合は認証タグを取扱う必要があります。下のプログラムで示すように、暗号化の際は、"Final"の後に復号の際に使用する認証タグを得ておきます。復号の際は、"Final"の前にそのタグを設定します。"Final"処理の返却値が成功であることで認証タグの検証が成功したことを確認します。
 <br><br><br>
@@ -150,7 +136,7 @@ AES-GCMなど認証付き暗号の場合は認証タグを取扱う必要があ�
     }
 
     if(mode == DEC) /* 復号処理ならば認証用タグを設定 */
-        EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, outTag1Part);
+        EVP_CIPHER_CTX_ctrl(evp, EVP_CTRL_AEAD_SET_TAG, 16, tagIn;
 
     if(EVP_CipherFinal(evp, out, &outl) != SSL_SUCCESS) /* パディング処理 */
         エラー処理
@@ -158,12 +144,30 @@ AES-GCMなど認証付き暗号の場合は認証タグを取扱う必要があ�
         fwrite(out, 1, outl, outfp);
 
     if(mode == ENC) /* 暗号処理ならばタグを得る */
-        EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, outTag1Part);
+        EVP_CIPHER_CTX_ctrl(evp EVP_CTRL_AEAD_GET_TAG, 16, tagOut);
     
     EVP_CIPHER_CTX_free(evp);
 
 
 ```
+## 4) EVP関数の命名規則
+
+EVP関数では、共通鍵の暗号または復号処理の方向がプログラミング時に静的に決定している場合のための関数と実行時に動的に決めることができる関数の二つの系列の関数が用意されています。静的な場合は関数名に"Encrypt"または"Decrypt"の命名が含まれていて、処理の方向を表します。動的な場合は関数名には"Cipher"の命名がされ、EVP_CipherInitの初期設定時に処理の方向を指定します。次の表に、これらの共通鍵処理のための関数名をまとめます。
+
+|機能|暗号化|復号|動的指定|
+|---|---|---|---|
+|コンテクスト確保|EVP_CIPHER_CTX_new|EVP_CIPHER_CTX_new|EVP_CIPHER_CTX_new|
+|初期設定|EVP_EncryptInit|EVP_DecryptInit|EVP_CipherInit|
+|暗号/復号|EVP_EncryptUpdate|EVP_DecryptUpdate|EVP_CipherUpdate|
+|終了処理|EVP_EncryptFinal|EVP_DecryptFinal|EVP_CipherFinal|
+|コンテクスト解放|EVP_CIPHER_CTX_free|EVP_CIPHER_CTX_free|EVP_CIPHER_CTX_free|
+
+
+## 5) パディング処理
+EVP関数では、ブロック型暗号のためのパディング処理を自動的に行います。パディングスキームはPKCSです。このため、暗号化処理の場合は処理結果は入力データのサイズに比べてブロックサイズの整数倍にアラインされる分だけ大きくなる点に注意が必要です。入力データがブロックサイズの整数倍の場合にもパディング用に１ブロック分の出力データが付加されます。一方、復号化の際はパディングの内容が解消され、復号化された本来の出力データのみとなります。パディングを含んだ暗号、復号処理の出力データサイズは"Final"関数のアーギュメントに返却されます。
+
+パディングスキームにはPKCS#7に規定されるスキームが使用されます　(3.4 共通鍵暗号 4)パディングスキーム参照)。
+
 <br><br><br>
 
 ## 6) 暗号アルゴリズム、利用モード
@@ -188,8 +192,7 @@ EVPでは各種の暗号アルゴリズム、利用モードなどの処理パ�
 |EVP_idea_cbc      |IDEA|64|128|CBC|
 |EVP_rc4           |RC4||||
 
-## 7) 関連API
-
+## 7) その他のAPI
 
 <br>
 以下に共通鍵暗号の処理に関連する主なEVP関数をまとめます。

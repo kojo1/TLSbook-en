@@ -105,7 +105,7 @@ int main(int argc, char **argv)
         }
     }
 
-    chiper_main(mode, infp, outfp, key, key_sz, iv, iv_sz, tag, tag_sz);
+    cipher_main(mode, infp, outfp, key, key_sz, iv, iv_sz, tag, tag_sz);
 
 cleanup:
     if(infp != NULL)

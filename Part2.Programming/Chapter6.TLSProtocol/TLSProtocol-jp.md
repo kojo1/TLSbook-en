@@ -245,7 +245,7 @@ SSL_CTX_set_modeでSSL_MODE_ENABLE_PARTIAL_WRITEが指定されている場合�
 ![Fig. 6-3](./fig6-3.png)
 <br> <br>
 
-####  6.1.4 参照
+### 6.1.4 参照
 
 
 |分類|名前|説明|

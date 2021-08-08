@@ -5,9 +5,11 @@ SSL = WOLFSSL
 DEBUG= no
 TARGET   = aescbc
 
+COMM_SOURCE = ../common/cipher_main.c
+
 INSTALL_DIR = /usr/local/
 SOURCE   = ./aes-cbc.c
-SSOURCE   = ./server-tls.c
+
 
 ifeq ($(SSL),OPENSSL)
 INCLUDE   = -I../../include
@@ -21,8 +23,8 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE)
-	$(CC) $(CFLAGS) -o $(TARGET) $(LDFLAGS) $(SOURCE)
+$(TARGET): $(SOURCE) $(COMM_SOURCE)
+	$(CC) $(CFLAGS) -o $(TARGET) $(LDFLAGS) $(COMM_SOURCE) $(SOURCE)
 
 clean: FORCE
 	-rm -f *.o $(TARGET)

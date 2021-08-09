@@ -67,6 +67,8 @@ static int read_SESS(const char* file, SSL* ssl)
     }
 
 cleanup:
+    if (sess)
+        SSL_SESSION_free(sess);
     if (fp)
         fclose(fp);
     if (buff)

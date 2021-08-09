@@ -3,10 +3,10 @@ CC = gcc
 #SSL = OPENSSL
 SSL = WOLFSSL
 DEBUG= no
-CTARGET_CP   = Client-tls-ext-cipher-
+CTARGET_CP   = Client-tls-exts-
 STARGET   = Server-tls-
 INSTALL_DIR = /usr/local/
-CSOURCE_CP  = ./client-tls-ext-cipher.c
+CSOURCE_CP  = ./client-tls-exts.c
 SSOURCE   = ../client-server/server-tls.c
 COBJ_CP   = $(CSOURCE_CP:.c=.o)
 SOBJ      = $(SSOURCE:.c=.o)

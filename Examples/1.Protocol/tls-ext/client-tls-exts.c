@@ -69,9 +69,21 @@ int main(int argc, char **argv)
         fprintf(stderr,"ERROR: failed to set maximum protocol version\n");
         goto cleanup;
     }
-    /* Set cipher lsit */
+    /* Set cipher suites TLS extension */
     if ((ret = SSL_CTX_set_cipher_list(ctx, CIPHER_LIST)) != SSL_SUCCESS) {
         fprintf(stderr,"ERROR: failed to set cipher list\n");
+        goto cleanup;
+    }
+
+    /* Set supported_group/elliptic_curves TLS extension */
+    if ((ret =SSL_CTX_set1_groups_list(ctx, "P-521:P-384:P-256")) != SSL_SUCCESS) {
+        fprintf(stderr,"ERROR: failed to set cipher list\n");
+        goto cleanup;
+    }
+
+    /* Set signature algorithm TLS extension */
+    if ((ret = SSL_CTX_set1_sigalgs_list(ctx, "RSA+SHA256:RSA+SHA384")) != SSL_SUCCESS) {
+        fprintf(stderr,"ERROR: failed to set signature algorithm list\n");
         goto cleanup;
     }
    /* 
@@ -98,7 +110,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: failed to create an SSL object\n");
         goto cleanup;
     }
-
+    /* Set SNI(server name indication) TLS extension */
+    if ((ret = SSL_set_tlsext_host_name(ssl, "localhost")) != SSL_SUCCESS) {
+        fprintf(stderr, "ERROR: Failed to set SNI TLS extension\n");
+        goto cleanup;
+    }
     /* Attach the socket to the SSL */
     if ((ret = SSL_set_fd(ssl, sockfd)) != SSL_SUCCESS) {
         fprintf(stderr, "ERROR: Failed to set the file descriptor\n");

@@ -3,14 +3,13 @@ CC = gcc
 #SSL = OPENSSL
 SSL = WOLFSSL
 DEBUG= no
-TARGET   = aescbc
+TARGET   = rsa
 
 COMM_SOURCE = ../../common/main.c
 
 INSTALL_DIR = /usr/local/
-SOURCE_CBC   = ./aes-cbc.c
-SOURCE_GCM   = ./aes-gcm.c
-
+S_SIG   = ./rsaSig.c
+S_VER   = ./rsaVer.c
 
 ifeq ($(SSL),OPENSSL)
 INCLUDE   = -I../../include
@@ -24,12 +23,11 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE_CBC) $(SOURCE_GCM) $(COMM_SOURCE)
-	$(CC) $(CFLAGS) -o aescbc $(LDFLAGS) $(COMM_SOURCE) $(SOURCE_CBC)
-	$(CC) $(CFLAGS) -o aesgcm $(LDFLAGS) $(COMM_SOURCE) $(SOURCE_GCM)
-
+$(TARGET): $(S_SIG) $(S_VER) $(COMM_SOURCE)
+	$(CC) $(CFLAGS) -o $(TARGET)sig $(LDFLAGS) $(S_SIG) $(COMM_SOURCE)
+	$(CC) $(CFLAGS) -o $(TARGET)ver $(LDFLAGS) '-DOPEN_MODE="r+"' $(S_VER) $(COMM_SOURCE)
 clean: FORCE
-	-rm -f *.o aescbc aesgcm
+	-rm -f *.o $(TARGET)
 
 FORCE:
 .PHONY: FORCE

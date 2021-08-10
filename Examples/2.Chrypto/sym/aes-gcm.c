@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <openssl/ssl.h>
-#include "../common/cipher_main.h"
+#include "../../common/main.h"
 
 #define CIPHER EVP_aes_128_gcm()
 
 #define BUFF_SIZE   256
 
-void cipher_main(int mode, FILE *infp, int size, FILE *outfp,
+void algo_main(int mode, FILE *infp, int size, FILE *outfp,
                  unsigned char *key, int key_sz,
                  unsigned char *iv,  int iv_sz,
                  unsigned char *tagIn, int tag_sz)

@@ -8,7 +8,8 @@ TARGET   = aescbc
 COMM_SOURCE = ../common/cipher_main.c
 
 INSTALL_DIR = /usr/local/
-SOURCE   = ./aes-cbc.c
+SOURCE_CBC   = ./aes-cbc.c
+SOURCE_GCM   = ./aes-gcm.c
 
 
 ifeq ($(SSL),OPENSSL)
@@ -23,11 +24,12 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE) $(COMM_SOURCE)
-	$(CC) $(CFLAGS) -o $(TARGET) $(LDFLAGS) $(COMM_SOURCE) $(SOURCE)
+$(TARGET): $(SOURCE_CBC) $(SOURCE_GCM) $(COMM_SOURCE)
+	$(CC) $(CFLAGS) -o aescbc $(LDFLAGS) $(COMM_SOURCE) $(SOURCE_CBC)
+	$(CC) $(CFLAGS) -o aesgcm $(LDFLAGS) $(COMM_SOURCE) $(SOURCE_GCM)
 
 clean: FORCE
-	-rm -f *.o $(TARGET)
+	-rm -f *.o aescbc aesgcm
 
 FORCE:
 .PHONY: FORCE

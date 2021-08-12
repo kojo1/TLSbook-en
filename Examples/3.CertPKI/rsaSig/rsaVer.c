@@ -7,7 +7,7 @@
 
 #define HASH EVP_sha256()
 
-void algo_main(int mode, FILE *infp, int size, FILE *fp2,
+void algo_main(int mode, FILE *infp, FILE *fp2,
                  unsigned char *key, int key_sz,
                  unsigned char *iv, int iv_sz,
                  unsigned char *tag, int tag_sz)
@@ -37,8 +37,7 @@ void algo_main(int mode, FILE *infp, int size, FILE *fp2,
     }
     /* End argment check */
 
-    if(size > KEY_SIZE || 
-      (key_sz = fread(pubkey, 1, KEY_SIZE, infp)) < 0) {
+    if((key_sz = fread(pubkey, 1, KEY_SIZE, infp)) < 0) {
         fprintf(stderr, "ERROR: read key\n");
         return;
     }
@@ -63,11 +62,12 @@ void algo_main(int mode, FILE *infp, int size, FILE *fp2,
         goto cleanup;
     }
 
-    for (; size > 0; size -= BUFF_SIZE) {
+    while (1) {
         if((inl = fread(msg, 1, BUFF_SIZE, stdin)) < 0) {
             fprintf(stderr, "ERROR: fread\n");
             goto cleanup;
         }
+        if(inl < BUFF_SIZE)break;
         EVP_DigestVerifyUpdate(md, msg, inl);
     }
 

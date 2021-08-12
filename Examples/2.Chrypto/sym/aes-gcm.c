@@ -7,7 +7,7 @@
 
 #define BUFF_SIZE   256
 
-void algo_main(int mode, FILE *infp, int size, FILE *outfp,
+void algo_main(int mode, FILE *infp, FILE *outfp,
                  unsigned char *key, int key_sz,
                  unsigned char *iv,  int iv_sz,
                  unsigned char *tagIn, int tag_sz)
@@ -58,9 +58,12 @@ void algo_main(int mode, FILE *infp, int size, FILE *outfp,
     /* End argment check */
 
     /* Start cipher process */
-    for( ; size > 0; size -= BUFF_SIZE) {
-        inl = fread(in, 1, BUFF_SIZE, infp); 
-        in[inl] = '\0';
+    while(1) {
+        if((inl = fread(in, 1, BUFF_SIZE, infp)) <0) {
+            fprintf(stderr, "ERROR: fread\n");
+            return;
+        } 
+        if(inl < BUFF_SIZE) break;
         EVP_CipherUpdate(evp, out, &outl, in, inl);
         fwrite(out, 1, outl, outfp);
     }
